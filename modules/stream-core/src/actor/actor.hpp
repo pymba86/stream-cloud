@@ -2,7 +2,7 @@
 
 #include <string>
 #include <intrusive_ptr.hpp>
-#include "abstract_actor.hpp"
+#include "forwards.hpp"
 
 namespace stream_cloud {
     namespace actor {

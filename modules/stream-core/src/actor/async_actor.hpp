@@ -2,10 +2,11 @@
 
 #include <memory>
 #include <unordered_map>
+
 #include "abstract_actor.hpp"
 #include "local_actor.hpp"
 #include <behavior/context.hpp>
-#include <behavior/reactions.hpp>
+#include <forwards.hpp>
 #include <executor/executable.hpp>
 #include <messaging/mail_box.hpp>
 #include <executor/execution_device.hpp>

@@ -11,11 +11,7 @@ message (STATUS "${PROJECT_NAME} : CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 add_compile_options(
         -v
         -fno-rtti
-        -fno-exceptions
 )
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -pthread ")
-
 
 set(HEADER_FILES
         src/metadata.hpp
@@ -80,8 +76,9 @@ add_library(
 
 set_target_properties( ${PROJECT} PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+target_link_libraries(    ${PROJECT}        ${Boost_LIBRARIES})
+
 target_include_directories(
         ${PROJECT}
         PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
 )

@@ -7,6 +7,9 @@
 #include <behavior/reactions.hpp>
 #include <executor/execution_device.hpp>
 #include <actor/actor_address.hpp>
+#include <forwards.hpp>
+#include <channel/channel.hpp>
+
 namespace stream_cloud {
 
     namespace actor {

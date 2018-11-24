@@ -3,6 +3,7 @@
 
 #include <intrusive_ptr.hpp>
 #include "abstract_actor.hpp"
+#include <forwards.hpp>
 
 namespace stream_cloud {
     namespace actor {
@@ -19,7 +20,7 @@ namespace stream_cloud {
 
             actor_address &operator=(const actor_address &) = default;
 
-            explicit actor_address(abstract_actor *aa);
+            explicit actor_address(abstract_actor* aa);
 
             ~actor_address() = default;
 

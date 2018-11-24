@@ -1,9 +1,6 @@
 #include <environment/abstract_group.hpp>
 #include <messaging/message.hpp>
 #include <environment/group.hpp>
-#include <channel/channel.hpp>
-#include "storage_space.hpp"
-#include <actor/actor_address.hpp>
 
 namespace stream_cloud {
 
@@ -18,7 +15,7 @@ namespace stream_cloud {
 
         void abstract_group::add(actor::abstract_actor *t) {
             if (!shared_point.empty()) {
-                for (auto &i:shared_point) {
+             /* FIXME   for (auto &i:shared_point) {
                     t->send(
                             messaging::make_message(
                                     t->address(),
@@ -26,7 +23,7 @@ namespace stream_cloud {
                                     storage_space_.get(i)
                             )
                     );
-                }
+                } */
             }
             auto index = storage_space_.add(t);
             storage_space_.create_link(entry_point_, index);
@@ -36,41 +33,42 @@ namespace stream_cloud {
             actor::actor_address address = t->address();
             auto id = storage_space_.add(t);
             shared_point.push_back(id);
-            storage_space_.get(entry_point_)->send(
+            /* FIXME storage_space_.get(entry_point_)->send(
                     messaging::make_message(
                             t->address(),
                             "sync_contacts",
                             actor::actor_address(address)
                     )
-            );
+            ); */
             for (auto &i:storage_space_.current_layer(entry_point_)) {
-                i->send(
+              /* FIXME  i->send(
                         messaging::make_message(
                                 t->address(),
                                 "sync_contacts",
                                 actor::actor_address(address)
                         )
                 );
+                */
             }
         }
 
         void abstract_group::join(group &g) {
-            entry_point()->send(
+          /* FIXME  entry_point()->send(
                     messaging::make_message(
                             g->entry_point(),
                             "sync_contacts",
                             g->entry_point()
                     )
-            );
+            ); */
             if (!storage_space_.current_layer(entry_point_).empty()) {
                 for (auto &i:storage_space_.current_layer(entry_point_)) {
-                    i->send(
+                   /* FIXME i->send(
                             messaging::make_message(
                                     g->entry_point(),
                                     "sync_contacts",
                                     g->entry_point()
                             )
-                    );
+                    ); */
                 }
             }
         }
@@ -78,7 +76,7 @@ namespace stream_cloud {
         abstract_group::abstract_group(storage_space ss, actor::abstract_actor *t) :
                 cursor(0),
                 storage_space_(ss) {
-            t->send(messaging::make_message(t->address(),"add_channel", channel()));
+          // FIXME  t->send(messaging::make_message(t->address(),"add_channel", channel()));
             entry_point_ = ss.add(t);
             type_.type = abstract::channel;
         }

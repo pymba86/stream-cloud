@@ -39,10 +39,6 @@ namespace stream_cloud {
                 std::cout << i.first << std::endl;
         }
 
-        local_actor::~local_actor() {
-
-        }
-
 
         executor::execution_device *local_actor::device() const {
             return executor_;

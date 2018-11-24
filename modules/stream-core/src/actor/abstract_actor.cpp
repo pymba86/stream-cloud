@@ -1,5 +1,6 @@
 
 #include <actor/abstract_actor.hpp>
+#include <actor/actor_address.hpp>
 
 namespace stream_cloud {
     namespace actor {

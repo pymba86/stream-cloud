@@ -4,25 +4,31 @@ set(PROJECT stream-providers)
 
 project(${PROJECT} CXX)
 
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 
 message (STATUS "${PROJECT_NAME} : CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 
 add_compile_options(
         -v
         -fno-rtti
-        -fno-exceptions
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -pthread ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -pthread")
+
 
 
 list(APPEND HEADER_FILES
         src/http/http_server.hpp
+        src/http/http_context.hpp
+        src/http/http_session.hpp
+        src/http/listener.hpp
         )
 
 list(APPEND SOURCE_FILES
-        src/http/http_server.cpp)
+        src/http/http_server.cpp
+        src/http/http_session.cpp
+        src/http/listener.cpp
+        )
 
 add_library(
         ${PROJECT}
@@ -30,12 +36,16 @@ add_library(
         ${HEADER_FILES}
 )
 
-
-set_target_properties( ${PROJECT} PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(    ${PROJECT}        ${Boost_LIBRARIES}    stream-core
+        stream-api
+        stream-config
+        stream-io)
 
 target_include_directories(
         ${PROJECT}
         PUBLIC
         stream-core
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        stream-api
+        stream-config
+        stream-io
 )

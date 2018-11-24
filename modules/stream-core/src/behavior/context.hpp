@@ -4,6 +4,7 @@
 #include <actor/actor_address.hpp>
 #include <stack>
 #include <memory>
+#include <messaging/message.hpp>
 
 namespace stream_cloud {
 

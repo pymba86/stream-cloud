@@ -11,7 +11,7 @@ namespace stream_cloud {
             return header_.command();
         }
 
-        auto message::clone() const -> const message {
+        auto message::clone() const ->  message {
             return message(header_,body_);
         }
 

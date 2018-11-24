@@ -11,16 +11,27 @@ message (STATUS "${PROJECT_NAME} : CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 add_compile_options(
         -v
         -fno-rtti
-        -fno-exceptions
 )
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -pthread ")
 
 
 list(APPEND HEADER_FILES
+        src/forward.hpp
+        src/dynamic.hpp
+        src/object.hpp
+        src/constructors.hpp
+        src/converters.hpp
+        src/context.hpp
+        src/data_provider.hpp
+        src/abstract_service.hpp
+        src/dynamic_environment.hpp
         )
 
-list(APPEND SOURCE_FILES)
+list(APPEND SOURCE_FILES
+        src/dynamic.cpp
+        src/data_provider.cpp
+        src/abstract_service.cpp
+        src/dynamic_environment.cpp
+        )
 
 add_library(
         ${PROJECT}
@@ -31,9 +42,11 @@ add_library(
 
 set_target_properties( ${PROJECT} PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+target_link_libraries(    ${PROJECT}        ${Boost_LIBRARIES}  stream-core)
+
 target_include_directories(
         ${PROJECT}
         PUBLIC
+
         stream-core
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
 )

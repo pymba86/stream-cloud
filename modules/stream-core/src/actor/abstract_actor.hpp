@@ -4,7 +4,7 @@
 #include <ref_counted.hpp>
 #include <metadata.hpp>
 #include <set>
-#include <messaging/message.hpp>
+#include <forwards.hpp>
 #include <environment/environment.hpp>
 
 namespace stream_cloud {
@@ -42,7 +42,6 @@ namespace stream_cloud {
             abstract_actor &operator=(const abstract_actor &) = delete;
 
             environment::environment env_;
-        };
         };
     }
 }

@@ -2,6 +2,9 @@
 #include <actor/async_actor.hpp>
 #include <iostream>
 #include <executor/execution_device.hpp>
+#include <executor/abstract_coordinator.hpp>
+#include <environment/environment.hpp>
+#include <behavior/abstract_action.hpp>
 
 
 namespace stream_cloud {

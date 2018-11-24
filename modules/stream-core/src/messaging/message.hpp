@@ -22,27 +22,27 @@ namespace stream_cloud {
 
             ~message() = default;
 
-            message(actor::actor_address /*sender*/, const std::string & /*name*/, any &&/*body*/);
+            message(actor::actor_address /*sender*/, const std::string& /*name*/, any &&/*body*/);
 
-            const behavior::type_action& command() const noexcept;
+            auto command() const noexcept -> const behavior::type_action &;
 
-            actor::actor_address sender() const;
-
-            const message clone() const;
+            auto sender() const -> actor::actor_address ;
 
             template<typename T>
-            auto body() const -> const T & {
+            auto body() const -> const T& {
                 return body_.as<T>();
             }
 
             template<typename T>
-            auto body() -> T & {
+            auto body() -> T& {
                 return body_.as<T>();
             }
 
-            explicit operator bool();
+            auto clone() const -> message;
 
-            void swap(message &other) noexcept;
+            operator bool();
+
+            void swap(message& other) noexcept;
 
         private:
             message(const message_header &header, const any &body);
@@ -59,4 +59,8 @@ namespace stream_cloud {
             return message(sender_,name, std::forward<T>(data));
         }
     }
+}
+
+inline void swap(stream_cloud::messaging::message &lhs, stream_cloud::messaging::message &rhs) noexcept {
+    lhs.swap(rhs);
 }
