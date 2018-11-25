@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+<script>
+    var wsApp = (function(){
+
+        var wsApp = {};
+
+        var wsUri = "ws://127.0.0.1:8080/";
+        var outputEl;
+
+        var websocket;
+
+        wsApp.init = function() {
+            testWebSocket();
+        };
+
+        function testWebSocket(){
+            websocket = new WebSocket(wsUri);
+            websocket.onopen = onOpen;
+            websocket.onclose = onClose;
+            websocket.onmessage = onMessage;
+            websocket.onerror = onError;
+        }
+
+        function onOpen(evt){
+            alert("CONNECTED");
+            doSend("WebSocket rocks");
+        }
+
+        function onClose(evt){
+            alert("DISCONNECTED");
+        }
+
+        function onMessage(evt){
+           alert("Message: " + evt.data)
+            //websocket.close();
+        }
+
+        function onError(evt){
+            alert(evt.data);
+        }
+
+        function doSend(message){
+            alert("SENT: " + message);
+            websocket.send(message);
+        }
+
+
+
+        return wsApp;
+
+    })();
+
+    window.addEventListener("load", wsApp.init, false);
+</script>
+</body>
+</html>

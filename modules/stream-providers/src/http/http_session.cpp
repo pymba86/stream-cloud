@@ -2,6 +2,7 @@
 #include <boost/beast/core/string.hpp>
 #include <iostream>
 #include <intrusive_ptr.hpp>
+#include "websocket_session.hpp"
 
 namespace stream_cloud {
     namespace providers {
@@ -76,6 +77,13 @@ namespace stream_cloud {
 
                 if (ec)
                     return ;
+
+                // See if it is a WebSocket Upgrade
+                if (websocket::is_upgrade(req_)) {
+                    // Create a WebSocket websocket_session by transferring the socket
+                    std::make_shared<websocket_session>(std::move(socket_), handle_processing)->do_accept(std::move(req_));
+                    return;
+                }
 
                 // Send the response
                 handle_processing(std::move(req_), id);

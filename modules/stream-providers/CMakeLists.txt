@@ -22,12 +22,20 @@ list(APPEND HEADER_FILES
         src/http/http_context.hpp
         src/http/http_session.hpp
         src/http/listener.hpp
+        src/ws/ws_listener.hpp
+        src/ws/ws_session.hpp
+        src/ws/ws_server.hpp
+        src/http/websocket_session.hpp
         )
 
 list(APPEND SOURCE_FILES
         src/http/http_server.cpp
         src/http/http_session.cpp
         src/http/listener.cpp
+        src/ws/ws_session.cpp
+        src/ws/ws_server.cpp
+        src/ws/ws_listener.cpp
+        src/http/websocket_session.cpp
         )
 
 add_library(

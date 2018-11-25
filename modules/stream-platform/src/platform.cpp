@@ -2,6 +2,7 @@
 #include <dynamic_environment.hpp>
 #include <router.hpp>
 #include <http/http_server.hpp>
+#include <ws/ws_server.hpp>
 
 #include <boost/stacktrace.hpp>
 
@@ -29,8 +30,10 @@ void init_service(config::dynamic_environment&env) {
 
     auto& router = env.add_service<router::router>();
     auto& http = env.add_data_provider<providers::http_server::http_server>(router->entry_point());
+    auto& ws = env.add_data_provider<providers::ws_server::ws_server>(router->entry_point());
 
     router->add_shared(http.address().operator->());
+    router->add_shared(ws.address().operator->());
 
 }
 

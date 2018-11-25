@@ -12,7 +12,7 @@ namespace stream_cloud {
             listener::listener(boost::asio::io_context &ioc, tcp::endpoint endpoint, actor::actor_address pipe_) :
                     acceptor_(ioc),
                     socket_(ioc),
-                    pipe_(std::move(pipe_)) {
+                    pipe_(pipe_) {
                 boost::system::error_code ec;
 
                 // Open the acceptor
@@ -75,6 +75,7 @@ namespace stream_cloud {
                 do_accept();
             }
 
+            // FIXME Передача сообщения должна быть уникальна
             void listener::write(const intrusive_ptr<api::http>& ptr) {
                 auto &session = storage_session.at(ptr->id());
                 session->write(ptr);

@@ -33,4 +33,5 @@ add_subdirectory(modules/stream-providers)
 add_subdirectory(modules/stream-config)
 add_subdirectory(modules/stream-router)
 add_subdirectory(modules/stream-platform)
+add_subdirectory(examples/websocket)
 

@@ -19,11 +19,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -pthread ")
 list(APPEND HEADER_FILES
         src/transport_base.hpp
         src/http.hpp
+        src/websocket.hpp
         )
 
 list(APPEND SOURCE_FILES
         src/transport_base.cpp
-        src/http.cpp)
+        src/http.cpp
+        src/websocket.cpp
+        )
 
 add_library(
         ${PROJECT}

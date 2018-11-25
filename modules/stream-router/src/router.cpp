@@ -8,6 +8,8 @@
 #include <http.hpp>
 #include <boost/format.hpp>
 #include <intrusive_ptr.hpp>
+#include <transport_base.hpp>
+#include "websocket.hpp"
 
 namespace stream_cloud {
     namespace router {
@@ -30,22 +32,35 @@ namespace stream_cloud {
                             "dispatcher",
                             [this](behavior::context &ctx) -> void {
                                 auto transport = ctx.message().body<api::transport>();
+                                auto transport_type = transport->type();
+                                std::string response = str(
+                                        boost::format(R"({ "data": "%1%"})") % transport->id());
+
+
+                                if (transport_type == api::transport_type::ws) {
+                                    auto ws_response = new api::web_socket(transport->id());
+                                    auto *ws = static_cast<api::web_socket *>(transport.get());
+
+                                    ws_response->body = response;
+
+                                    ctx->addresses("ws")->send(
+                                            messaging::make_message(
+                                                    ctx->self(),
+                                                    "write",
+                                                    api::transport(ws_response)
+                                            )
+                                    );
+                                    return;
+                                }
+
                                 auto http_response = new api::http(transport->id());
-                                auto http_print = new api::http(transport->id());
                                 auto *http = static_cast<api::http *>(transport.get());
 
-                              ctx->addresses("http")->send(
-                                        messaging::make_message(
-                                                ctx->self(),
-                                                "print",
-                                                api::transport(http_print)
-                                        )
-                                );
 
-                                if (http->uri() == "/system") {
-                                    std::string response = str(boost::format(R"({ "data": "%1%"})") % http_response->id());
-                                    http_response->body(response);
+                                if (transport_type == api::transport_type::http && http->uri() == "/system") {
+
                                     http_response->header("Content-Type", "application/json");
+                                    http_response->body(response);
 
                                     ctx->addresses("http")->send(
                                             messaging::make_message(
@@ -54,7 +69,8 @@ namespace stream_cloud {
                                                     api::transport(http_response)
                                             )
                                     );
-                                } else {
+                                } else if (transport_type == api::transport_type::http) {
+
                                     ctx->addresses("http")->send(
                                             messaging::make_message(
                                                     ctx->self(),
