@@ -22,9 +22,11 @@ namespace stream_cloud {
                         actor::actor_address pipe_
                 );
 
-                ~listener() = default;
+                ~listener() override = default;
 
                 void write(std::unique_ptr<api::transport_base>);
+
+                void close(std::unique_ptr<api::transport_base> ptr);
 
                 void add_trusted_url(std::string name);
 

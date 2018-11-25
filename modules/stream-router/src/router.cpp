@@ -6,6 +6,7 @@
 
 #include <transport_base.hpp>
 #include <http.hpp>
+#include <boost/format.hpp>
 
 namespace stream_cloud {
     namespace router {
@@ -27,19 +28,35 @@ namespace stream_cloud {
                     behavior::make_handler(
                             "dispatcher",
                             [this](behavior::context &ctx) -> void {
-                                auto& transport = ctx.message().body<api::transport>();
-                                auto *http = static_cast<api::http *>(transport.detach());
-
+                                auto &transport = ctx.message().body<api::transport>();
+                                auto http_response = new api::http(transport->id());
+                                auto *http = static_cast<api::http *>(transport.get());
 
 
                                 if (http->uri() == "/system") {
-                                  std::cout << "Hello World";
-                                    return ;
+                                    std::string response = str(boost::format(R"({ "data": "%1%"})") % http_response->id());
+                                    http_response->body(response);
+                                    http_response->header("Content-Type", "application/json");
+
+                                    ctx->addresses("http")->send(
+                                            messaging::make_message(
+                                                    ctx->self(),
+                                                    "write",
+                                                    api::transport(http_response)
+                                            )
+                                    );
                                 }
+
+                                ctx->addresses("http")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "close",
+                                                api::transport(http_response)
+                                        )
+                                );
                             }
                     )
             );
-
 
         }
 

@@ -75,11 +75,12 @@ namespace stream_cloud {
             }
 
             void listener::write(std::unique_ptr<api::transport_base> ptr) {
-                std::cerr << "id = " << ptr->id() <<std::endl;
-
                 auto &session = storage_session.at(ptr->id());
-
                 session->write(std::move(ptr));
+            }
+
+            void listener::close(std::unique_ptr<api::transport_base> ptr) {
+                storage_session.erase(ptr->id());
             }
 
             void listener::add_trusted_url(std::string name) {
@@ -110,7 +111,6 @@ namespace stream_cloud {
 
                 http->body(req.body());
 
-                //api::transport http_data(std::move(http_transport_));
                 pipe_->send(
                         messaging::make_message(
                                 pipe_,

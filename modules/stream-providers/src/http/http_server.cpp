@@ -61,6 +61,18 @@ namespace stream_cloud {
                         )
                 );
 
+                attach(
+                        behavior::make_handler(
+                                "close",
+                                [this](behavior::context& ctx) -> void {
+                                    auto& t = ctx.message().body<api::transport>();
+                                    auto* transport_tmp = t.detach();
+                                    std::unique_ptr<api::http> transport(static_cast<api::http*>(transport_tmp));
+                                    pimpl->listener_->close(std::move(transport));
+                                }
+                        )
+                );
+
             }
 
             http_server::~http_server() {

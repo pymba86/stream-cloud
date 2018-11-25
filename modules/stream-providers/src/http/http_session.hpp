@@ -86,9 +86,9 @@ namespace stream_cloud {
                 http::request <http::string_body> req_;
                 queue queue_;
                 http_context& handle_processing;
-                const api::transport_id id;
+                api::transport_id id;
             public:
-                http_session(tcp::socket socket,api::transport_id , http_context& );
+                http_session(tcp::socket socket, const api::transport_id& , http_context& );
 
                 ~http_session();
 
@@ -97,7 +97,7 @@ namespace stream_cloud {
 
                 void do_read();
 
-                // Called when the timer expires.
+                // Called when the timer expires.h
                 void on_timer(boost::system::error_code ec);
 
                 void on_read(boost::system::error_code ec);

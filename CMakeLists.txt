@@ -17,6 +17,7 @@ include_directories (SYSTEM ${Boost_INCLUDE_DIR})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -pthread  -lpthread -lboost_thread -lboost_system")
 
+
 include_directories(modules/stream-api/src)
 include_directories(modules/stream-core/src)
 include_directories(modules/stream-io/src)

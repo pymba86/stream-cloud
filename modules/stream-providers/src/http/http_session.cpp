@@ -1,5 +1,6 @@
 #include "http_session.hpp"
 #include <boost/beast/core/string.hpp>
+#include <iostream>
 
 namespace stream_cloud {
     namespace providers {
@@ -12,7 +13,7 @@ namespace stream_cloud {
             >
             using request = http::request<Body, http::basic_fields<Allocator>>;
 
-            http_session::http_session(tcp::socket socket, api::transport_id id, http_context& pipe_)
+            http_session::http_session(tcp::socket socket, const api::transport_id& id, http_context& pipe_)
                     :
                     socket_(std::move(socket)),
                     strand_(socket_.get_executor()),
@@ -141,7 +142,7 @@ namespace stream_cloud {
                 queue_(std::move(res));
             }
 
-            http_session::~http_session() = default;
+            http_session::~http_session() = default;;
 
             bool http_session::queue::on_write() {
                 BOOST_ASSERT(!items_.empty());

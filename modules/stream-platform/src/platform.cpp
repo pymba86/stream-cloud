@@ -5,6 +5,7 @@
 
 #include <boost/stacktrace.hpp>
 
+
 using namespace stream_cloud;
 
 void terminate_handler() {
