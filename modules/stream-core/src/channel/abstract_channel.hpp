@@ -1,13 +1,13 @@
 #pragma once
 #include <string>
-#include <ref_counted.hpp>
 #include <forwards.hpp>
 #include <metadata.hpp>
+#include <intrusive_ptr.hpp>
 
 namespace stream_cloud {
 
     namespace channel {
-        struct abstract_channel : public ref_counted {
+        struct abstract_channel : public intrusive_base<abstract_channel> {
             virtual ~abstract_channel();
 
             virtual auto send(messaging::message &&)  -> bool      = 0;

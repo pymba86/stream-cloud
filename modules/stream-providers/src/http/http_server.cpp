@@ -41,11 +41,20 @@ namespace stream_cloud {
 
                 attach(
                         behavior::make_handler(
+                                "print",
+                                [this](behavior::context& ctx) -> void {
+                                    auto t = ctx.message().body<api::transport>();
+                                   std::cout << "id: " << t->id() << std::endl;
+                                }
+                        )
+                );
+
+                attach(
+                        behavior::make_handler(
                                 "write",
                                 [this](behavior::context& ctx) -> void {
-                                    auto& t = ctx.message().body<api::transport>();
-                                    auto* transport_tmp = t.detach();
-                                    std::unique_ptr<api::http> transport(static_cast<api::http*>(transport_tmp));
+                                    auto t = ctx.message().body<api::transport>();
+                                    std::unique_ptr<api::http> transport(static_cast<api::http*>(t.release()));
                                     pimpl->listener_->write(std::move(transport));
                                 }
                         )
@@ -65,9 +74,8 @@ namespace stream_cloud {
                         behavior::make_handler(
                                 "close",
                                 [this](behavior::context& ctx) -> void {
-                                    auto& t = ctx.message().body<api::transport>();
-                                    auto* transport_tmp = t.detach();
-                                    std::unique_ptr<api::http> transport(static_cast<api::http*>(transport_tmp));
+                                    auto t = ctx.message().body<api::transport>();
+                                    std::unique_ptr<api::http> transport(static_cast<api::http*>(t.release()));
                                     pimpl->listener_->close(std::move(transport));
                                 }
                         )

@@ -80,14 +80,6 @@ namespace stream_cloud {
         }
 
 
-        void async_actor::attach_to_scheduler() {
-            ref();
-        }
-
-        void async_actor::detach_from_scheduler() {
-            deref();
-        }
-
         async_actor::async_actor(environment::abstract_environment *env,mailbox_type* mail_ptr, const std::string &name):
                 local_actor(env, name),
                 mailbox_(mail_ptr) {

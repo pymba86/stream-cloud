@@ -19,9 +19,9 @@ namespace stream_cloud {
             return init;
         }
 
-        message::message(actor::actor_address sender_,const std::string& name, any &&body):
+        message::message(actor::actor_address& sender_,const std::string& name, any &&body):
                 init(true),
-                header_(std::move(sender_),name),
+                header_(sender_,name),
                 body_(std::move(body)) {}
 
         message::message(const message_header &header, const any &body):

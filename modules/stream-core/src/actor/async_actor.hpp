@@ -34,9 +34,7 @@ namespace stream_cloud {
         protected:
             async_actor(environment::abstract_environment *, mailbox_type*, const std::string &);
 
-            void attach_to_scheduler() final;
-
-            void detach_from_scheduler() final;
+        
 
         private:
 

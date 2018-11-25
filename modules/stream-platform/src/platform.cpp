@@ -8,12 +8,6 @@
 
 using namespace stream_cloud;
 
-void terminate_handler() {
-    std::cerr << "terminate called:"
-              << std::endl
-              << boost::stacktrace::stacktrace()
-              << std::endl;
-}
 
 void signal_sigsegv(int signum){
     boost::stacktrace::stacktrace bt ;
@@ -37,15 +31,13 @@ void init_service(config::dynamic_environment&env) {
     auto& http = env.add_data_provider<providers::http_server::http_server>(router->entry_point());
 
     router->add_shared(http.address().operator->());
+
 }
 
 
 int main(int argc, char **argv) {
 
     ::signal(SIGSEGV,&signal_sigsegv);
-
-    std::set_terminate(terminate_handler);
-
 
     config::dynamic_environment env;
     init_service(env);

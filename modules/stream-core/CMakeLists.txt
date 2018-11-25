@@ -17,7 +17,6 @@ set(HEADER_FILES
         src/metadata.hpp
         src/actor/actor.hpp
         src/intrusive_ptr.hpp
-        src/ref_counted.hpp
         src/actor/abstract_actor.hpp
         src/forwards.hpp
         src/actor/actor_address.hpp
@@ -56,7 +55,6 @@ set(HEADER_FILES
 
 set(SOURCE_FILES
         src/actor/actor.cpp
-        src/ref_counted.cpp
         src/actor/abstract_actor.cpp
         src/actor/actor_address.cpp
         src/actor/async_actor.cpp

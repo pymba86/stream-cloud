@@ -2,7 +2,7 @@
 
 #include <string>
 #include <intrusive_ptr.hpp>
-#include "forwards.hpp"
+#include <actor/abstract_actor.hpp>
 
 namespace stream_cloud {
     namespace actor {
@@ -60,7 +60,7 @@ namespace stream_cloud {
 
             void swap(actor &) noexcept;
 
-            intrusive_ptr <abstract_actor> heart;
+            intrusive_ptr<abstract_actor> heart;
         };
     }
 }

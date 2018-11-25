@@ -73,7 +73,8 @@ namespace stream_cloud {
         void dynamic_environment::startup() {
 
             for (auto &i:pimpl->data_provider_) {
-                config::startup(*(i.second.get()), static_cast<config_context_t *>(this));
+                auto provider = i.second.get();
+                config::startup(*provider, static_cast<config_context_t *>(this));
             }
 
             start();

@@ -22,7 +22,7 @@ namespace stream_cloud {
 
             ~message() = default;
 
-            message(actor::actor_address /*sender*/, const std::string& /*name*/, any &&/*body*/);
+            message(actor::actor_address& /*sender*/, const std::string& /*name*/, any &&/*body*/);
 
             auto command() const noexcept -> const behavior::type_action &;
 

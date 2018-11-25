@@ -16,8 +16,6 @@ namespace stream_cloud {
 
         ~abstract_service() override;
 
-            static constexpr bool in_plugin = false;
-
             virtual void startup(config_context_t *) = 0;
 
             virtual void shutdown() = 0;

@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include <ref_counted.hpp>
+#include <intrusive_ptr.hpp>
 #include <metadata.hpp>
 #include <set>
 #include <forwards.hpp>
@@ -9,7 +9,7 @@
 
 namespace stream_cloud {
     namespace actor {
-        class abstract_actor : public ref_counted {
+        class abstract_actor : public intrusive_base<abstract_actor> {
         public:
             virtual bool send(messaging::message &&) = 0;
 

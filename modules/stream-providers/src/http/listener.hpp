@@ -24,9 +24,9 @@ namespace stream_cloud {
 
                 ~listener() override = default;
 
-                void write(std::unique_ptr<api::transport_base>);
+                void write(const intrusive_ptr<api::http>& ptr);
 
-                void close(std::unique_ptr<api::transport_base> ptr);
+                void close(const intrusive_ptr<api::http>& ptr);
 
                 void add_trusted_url(std::string name);
 

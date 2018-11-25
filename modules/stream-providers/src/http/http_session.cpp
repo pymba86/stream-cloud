@@ -1,6 +1,7 @@
 #include "http_session.hpp"
 #include <boost/beast/core/string.hpp>
 #include <iostream>
+#include <intrusive_ptr.hpp>
 
 namespace stream_cloud {
     namespace providers {
@@ -132,13 +133,13 @@ namespace stream_cloud {
                                                  std::placeholders::_1)));
             }
 
-            void http_session::write(std::unique_ptr<api::transport_base> ptr) {
-                auto *http = static_cast<api::http *>(ptr.release());
+            void http_session::write(const intrusive_ptr<api::http>& ptr) {
+
                 http::response<http::string_body> res{http::status::ok, 11};
-                res.body() = http->body();
-                for (auto &&i:(*http)) {
+                res.body() = ptr->body();
+                /*for (auto &&i:(*http)) {
                     res.set(i.first, i.second);
-                }
+                } */
                 queue_(std::move(res));
             }
 
