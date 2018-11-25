@@ -7,6 +7,7 @@
 #include <transport_base.hpp>
 #include <http.hpp>
 #include <boost/format.hpp>
+#include <intrusive_ptr.hpp>
 
 namespace stream_cloud {
     namespace router {
@@ -28,10 +29,18 @@ namespace stream_cloud {
                     behavior::make_handler(
                             "dispatcher",
                             [this](behavior::context &ctx) -> void {
-                                auto &transport = ctx.message().body<api::transport>();
+                                auto transport = ctx.message().body<api::transport>();
                                 auto http_response = new api::http(transport->id());
+                                auto http_print = new api::http(transport->id());
                                 auto *http = static_cast<api::http *>(transport.get());
 
+                              ctx->addresses("http")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "print",
+                                                api::transport(http_print)
+                                        )
+                                );
 
                                 if (http->uri() == "/system") {
                                     std::string response = str(boost::format(R"({ "data": "%1%"})") % http_response->id());
@@ -45,29 +54,31 @@ namespace stream_cloud {
                                                     api::transport(http_response)
                                             )
                                     );
+                                } else {
+                                    ctx->addresses("http")->send(
+                                            messaging::make_message(
+                                                    ctx->self(),
+                                                    "close",
+                                                    api::transport(http_response)
+                                            )
+                                    );
                                 }
 
-                                ctx->addresses("http")->send(
-                                        messaging::make_message(
-                                                ctx->self(),
-                                                "close",
-                                                api::transport(http_response)
-                                        )
-                                );
+
                             }
                     )
             );
 
         }
 
-        router::~router() = default;
+        router::~router() {
+
+        };
 
         void router::startup(config::config_context_t *) {
-
         }
 
         void router::shutdown() {
-
         }
     }
 }

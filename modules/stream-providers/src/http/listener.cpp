@@ -1,5 +1,6 @@
 #include <chrono>
 #include "listener.hpp"
+#include <intrusive_ptr.hpp>
 
 namespace stream_cloud {
     namespace providers {
@@ -74,12 +75,13 @@ namespace stream_cloud {
                 do_accept();
             }
 
-            void listener::write(std::unique_ptr<api::transport_base> ptr) {
+            void listener::write(const intrusive_ptr<api::http>& ptr) {
                 auto &session = storage_session.at(ptr->id());
-                session->write(std::move(ptr));
+                session->write(ptr);
+                storage_session.erase(ptr->id());
             }
 
-            void listener::close(std::unique_ptr<api::transport_base> ptr) {
+            void listener::close(const intrusive_ptr<api::http>& ptr) {
                 storage_session.erase(ptr->id());
             }
 
@@ -96,7 +98,7 @@ namespace stream_cloud {
 
             auto listener::operator()(http::request <http::string_body>&& req,api::transport_id id) const -> void {
 
-                auto* http = new api::http(id);
+                auto http = make_intrusive<api::http>(id);
 
                 http->method(std::string(req.method_string()));
 

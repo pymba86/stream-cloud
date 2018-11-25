@@ -15,8 +15,8 @@ namespace stream_cloud {
 
         using transport_id = std::size_t ;
 
-        struct transport_base : public ref_counted  {
-
+        class transport_base : public intrusive_base<transport_base>  {
+        public:
             transport_base(transport_type type,transport_id);
             virtual ~transport_base() = default;
             auto type() -> transport_type;

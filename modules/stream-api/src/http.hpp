@@ -3,6 +3,7 @@
 #include "transport_base.hpp"
 #include <unordered_map>
 #include <string>
+#include <iostream>
 
 namespace stream_cloud {
     namespace api {

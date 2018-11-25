@@ -25,7 +25,7 @@ namespace stream_cloud {
             ~actor_address() = default;
 
             inline abstract_actor *operator->() const noexcept {
-                return ptr_.get();
+                return ptr_;
             }
 
             inline explicit operator bool() const noexcept {
@@ -37,7 +37,7 @@ namespace stream_cloud {
             }
 
         private:
-            intrusive_ptr<abstract_actor> ptr_;
+            abstract_actor* ptr_;
         };
 
         inline void send(actor_address& address, messaging::message&& msg){

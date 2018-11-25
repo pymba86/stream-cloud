@@ -18,10 +18,6 @@ namespace stream_cloud {
         struct executable {
             virtual ~executable() = default;
 
-            virtual void attach_to_scheduler() = 0;
-
-            virtual void detach_from_scheduler() = 0;
-
             virtual executable_result run(executor::execution_device *,size_t max_throughput) = 0;
         };
     }

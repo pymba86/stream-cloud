@@ -106,7 +106,7 @@ namespace stream_cloud {
 
                 void do_close();
 
-                void write(std::unique_ptr<api::transport_base>);
+                void write(const intrusive_ptr<api::http>& ptr);
 
             };
 
