@@ -18,7 +18,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -pthread ")
 
 
 list(APPEND HEADER_FILES
-        src/actor/broker.hpp
+        src/actor/platform.hpp
         src/environment/network_environment.hpp
         src/network/connection_identifying.hpp
         src/network/multiplexer.hpp

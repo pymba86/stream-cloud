@@ -44,6 +44,7 @@ namespace stream_cloud {
                                 std::move(ws_data)
                         )
                 );
+
              /*   ws_.text(ws_.got_text());
                 ws_.async_write(
                         buffer_.data(),

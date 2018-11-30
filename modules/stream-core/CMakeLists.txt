@@ -63,7 +63,7 @@ set(SOURCE_FILES
         src/behavior/context.cpp
         src/behavior/type_action.cpp
         src/behavior/reactions.cpp
-        src/behavior/abstract_action.cpp src/channel/channel.cpp src/channel/abstract_channel.cpp src/environment/abstract_group.cpp src/environment/cooperation.cpp src/environment/environment.cpp src/environment/group.cpp src/environment/storage_space.cpp src/messaging/message.cpp src/messaging/blocking_mail_queue.cpp src/messaging/message_header.cpp src/standard_handlers/add_channel.cpp src/standard_handlers/skip.cpp "src/standard_handlers/sync_contacts.cpp" ../stream-io/src/actor/broker.hpp ../stream-io/src/actor/broker.cpp ../stream-providers/src/http/http_server.hpp ../stream-providers/src/http/http_server.cpp)
+        src/behavior/abstract_action.cpp src/channel/channel.cpp src/channel/abstract_channel.cpp src/environment/abstract_group.cpp src/environment/cooperation.cpp src/environment/environment.cpp src/environment/group.cpp src/environment/storage_space.cpp src/messaging/message.cpp src/messaging/blocking_mail_queue.cpp src/messaging/message_header.cpp src/standard_handlers/add_channel.cpp src/standard_handlers/skip.cpp "src/standard_handlers/sync_contacts.cpp" ../stream-broker/src/actor/platform.hpp ../stream-broker/src/actor/broker.cpp ../stream-providers/src/http/http_server.hpp ../stream-providers/src/http/http_server.cpp)
 
 
 add_library(

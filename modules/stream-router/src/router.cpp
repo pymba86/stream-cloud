@@ -10,6 +10,7 @@
 #include <intrusive_ptr.hpp>
 #include <transport_base.hpp>
 #include "websocket.hpp"
+#include <thread>
 
 namespace stream_cloud {
     namespace router {
@@ -36,7 +37,7 @@ namespace stream_cloud {
                                 std::string response = str(
                                         boost::format(R"({ "data": "%1%"})") % transport->id());
 
-
+                                std::this_thread::sleep_for(std::chrono::milliseconds(500));
                                 if (transport_type == api::transport_type::ws) {
                                     auto ws_response = new api::web_socket(transport->id());
                                     auto *ws = static_cast<api::web_socket *>(transport.get());

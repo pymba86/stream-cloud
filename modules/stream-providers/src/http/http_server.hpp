@@ -8,7 +8,7 @@ namespace stream_cloud {
 
             class http_server final: public config::data_provider {
             public:
-                http_server(config::config_context_t *ctx, actor::actor_address);
+                http_server(config::config_context_t *ctx, actor::actor_address, std::string port);
 
                 ~http_server();
 

@@ -31,7 +31,7 @@ namespace stream_cloud {
 
         struct dynamic_environment::impl final {
             impl() :
-                    coordinator_(new executor::coordinator<executor::work_sharing>(1, 1000)),
+                    coordinator_(new executor::coordinator<executor::work_sharing>(4, 1000)),
                     io_serv(new boost::asio::io_service),
                     background_(new boost::thread_group) {
             }

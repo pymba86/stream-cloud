@@ -26,14 +26,14 @@ namespace stream_cloud {
 
             };
 
-            http_server::http_server(config::config_context_t *ctx, actor::actor_address address):
+            http_server::http_server(config::config_context_t *ctx, actor::actor_address address,  std::string port_):
                     data_provider(ctx,"http"),
                     pimpl(new impl) {
 
                 auto const address_ = boost::asio::ip::make_address("127.0.0.1");
 
                // auto string_port = ctx->config().as_object()["http-port"].as_string();
-                auto string_port = "8080";
+                std::string string_port = port_;
                 auto tmp_port = std::stoul(string_port);
                 auto port = static_cast<unsigned short>(tmp_port);
 

@@ -1,10 +1,14 @@
 cmake_minimum_required(VERSION 2.8)
 
-set(CURRENT_TARGET stream-platform)
+set(CURRENT_TARGET stream-manager)
+
+add_compile_options(
+        -v
+        -fno-rtti
+)
 
 
-
-add_executable(${CURRENT_TARGET} src/platform.cpp)
+add_executable(${CURRENT_TARGET} src/manager.cpp )
 
 
 
@@ -17,5 +21,6 @@ target_link_libraries(
         stream-io
         stream-providers
         stream-router
+        stream-client
         dl
 )
