@@ -35,12 +35,10 @@ namespace stream_cloud {
                                 auto transport = ctx.message().body<api::transport>();
                                 auto transport_type = transport->type();
                                 std::string response = str(
-                                        boost::format(R"({ "data": "%1%"})") % transport->id());
+                                        boost::format(R"({ "type": "platform", "data": "%1%"})") % transport->id());
 
-                                std::this_thread::sleep_for(std::chrono::milliseconds(500));
                                 if (transport_type == api::transport_type::ws) {
                                     auto ws_response = new api::web_socket(transport->id());
-                                    auto *ws = static_cast<api::web_socket *>(transport.get());
 
                                     ws_response->body = response;
 

@@ -40,9 +40,9 @@ namespace stream_cloud {
 
 
 
-                api::transport_id id_= static_cast<api::transport_id>(std::chrono::duration_cast<std::chrono::microseconds>(clock::now().time_since_epoch()).count());
+              //  api::transport_id id_= static_cast<api::transport_id>(std::chrono::duration_cast<std::chrono::microseconds>(clock::now().time_since_epoch()).count());
 
-                pimpl->session_ = std::make_shared<ws_session>(ctx->main_loop(), id_, address);
+                pimpl->session_ = std::make_shared<ws_session>(ctx->main_loop(), 0, address);
 
 
                 attach(

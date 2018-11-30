@@ -45,57 +45,50 @@ public:
                             auto transport = ctx.message().body<api::transport>();
                             auto transport_type = transport->type();
                             std::string response = str(
-                                    boost::format(R"({ "data": "%1%"})") % transport->id());
-
-                            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                                    boost::format(R"({ "type": "manager", "data": "%1%"})") % transport->id());
 
 
-                            auto http_response = new api::http(transport->id());
-                            auto *http = static_cast<api::http *>(transport.get());
+                            if (transport_type == api::transport_type::http) {
+                                auto http_response = new api::http(transport->id());
+                                auto *http = static_cast<api::http *>(transport.get());
+                                if (http->uri() == "/system") {
 
+                                    http_response->header("Content-Type", "application/json");
+                                    http_response->body(response);
 
-                            if (transport_type == api::transport_type::http && http->uri() == "/system") {
+                                    ctx->addresses("http")->send(
+                                            messaging::make_message(
+                                                    ctx->self(),
+                                                    "write",
+                                                    api::transport(http_response)
+                                            )
+                                    );
 
-                                http_response->header("Content-Type", "application/json");
-                                http_response->body(response);
+                                    api::transport_id id = 0;
+                                    auto ws_response = new api::web_socket(id);
+                                    ws_response->body = response;
 
-                                ctx->addresses("http")->send(
-                                        messaging::make_message(
-                                                ctx->self(),
-                                                "write",
-                                                api::transport(http_response)
-                                        )
-                                );
-                            } else if (transport_type == api::transport_type::http) {
+                                    ctx->addresses("client")->send(
+                                            messaging::make_message(
+                                                    ctx->self(),
+                                                    "write",
+                                                    api::transport(ws_response)
+                                            )
+                                    );
+                                } else {
 
-                                ctx->addresses("http")->send(
-                                        messaging::make_message(
-                                                ctx->self(),
-                                                "close",
-                                                api::transport(http_response)
-                                        )
-                                );
-                            }
-
-                         //   if (transport_type == api::transport_type::ws) {
-                                auto ws_response = new api::web_socket(transport->id());
+                                    ctx->addresses("http")->send(
+                                            messaging::make_message(
+                                                    ctx->self(),
+                                                    "close",
+                                                    api::transport(http_response)
+                                            )
+                                    );
+                                }
+                            } else {
                                 auto *ws = static_cast<api::web_socket *>(transport.get());
-
-
-                                ws_response->body = response;
-
-                                ctx->addresses("client")->send(
-                                        messaging::make_message(
-                                                ctx->self(),
-                                                "write",
-                                                api::transport(ws_response)
-                                        )
-                                );
-                                return;
-                       //     }
-
-
-
+                                std::cout << ws->body << std::endl;
+                            }
                         }
                 )
         );
