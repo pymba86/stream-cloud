@@ -2,21 +2,25 @@ cmake_minimum_required(VERSION 3.10)
 
 list(APPEND BOOST_COMPONENTS
         thread
-        date_time
         system
-        filesystem
-        timer
-        chrono
-        program_options
-        unit_test_framework
         locale
+        timer
+        filesystem
+        serialization
         )
 
 find_package (Boost 1.68  REQUIRED COMPONENTS ${BOOST_COMPONENTS})
-include_directories (SYSTEM ${Boost_INCLUDE_DIR})
+include_directories (${Boost_INCLUDE_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -pthread  -lpthread -lboost_thread -lboost_system")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -pthread")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_ASIO_HAS_MOVE -DCXXOPTS_NO_RTTI" CACHE STRING "compile flags" FORCE)#-DBOOST_ASIO_NO_EXTENSIONS")
 
+
+add_compile_options(
+        -v
+        -Wall
+        -Wextra
+)
 
 include_directories(modules/stream-api/src)
 include_directories(modules/stream-core/src)

@@ -10,7 +10,6 @@ message (STATUS "${PROJECT_NAME} : CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 
 add_compile_options(
         -v
-        -fno-rtti
         -fno-exceptions
 )
 

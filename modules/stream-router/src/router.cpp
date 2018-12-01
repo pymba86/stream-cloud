@@ -11,6 +11,8 @@
 #include <transport_base.hpp>
 #include "websocket.hpp"
 #include <thread>
+#include <task.hpp>
+#include <json-rpc.hpp>
 
 namespace stream_cloud {
     namespace router {
@@ -19,8 +21,6 @@ namespace stream_cloud {
             impl() = default;
 
             ~impl() = default;
-
-
         };
 
         router::router(config::config_context_t *ctx) :
@@ -35,7 +35,10 @@ namespace stream_cloud {
                                 auto transport = ctx.message().body<api::transport>();
                                 auto transport_type = transport->type();
                                 std::string response = str(
-                                        boost::format(R"({ "type": "platform", "data": "%1%"})") % transport->id());
+                                        boost::format(R"({ "method": "platform", "id": "%1%"})") % transport->id());
+
+                                api::task task_;
+                                api::json_rpc::parse(response,task_.request);
 
                                 if (transport_type == api::transport_type::ws) {
                                     auto ws_response = new api::web_socket(transport->id());
