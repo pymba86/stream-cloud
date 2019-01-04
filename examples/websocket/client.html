@@ -11,7 +11,7 @@
 
         var wsApp = {};
 
-        var wsUri = "ws://127.0.0.1:8080/";
+        var wsUri = "ws://127.0.0.1:8081/";
         var outputEl;
 
         var websocket;
@@ -30,7 +30,7 @@
 
         function onOpen(evt){
             alert("CONNECTED");
-            doSend("WebSocket rocks");
+            doSend('{"id": "1", "method": "get_settings", params: ""}');
         }
 
         function onClose(evt){

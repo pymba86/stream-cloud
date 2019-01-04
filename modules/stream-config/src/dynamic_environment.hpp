@@ -4,6 +4,7 @@
 #include <actor/actor_address.hpp>
 #include <forward.hpp>
 #include "abstract_service.hpp"
+#include "configuration.hpp"
 
 namespace stream_cloud {
     namespace config {
@@ -12,9 +13,9 @@ namespace stream_cloud {
                 public abstract_environment {
         public:
 
-            dynamic_environment();
+            explicit dynamic_environment(configuration&&);
 
-            ~dynamic_environment();
+            ~dynamic_environment() override;
 
             template <typename SERVICE,typename ...Args>
             auto add_service(Args &&...args) -> service& {
@@ -41,7 +42,7 @@ namespace stream_cloud {
 
             auto add_data_provider(data_provider*)-> data_provider&;
 
-            //auto  config()  const -> dynamic_config& override;
+            auto  config()  const -> api::json::json_map&;
 
             int start() override ;
 

@@ -31,7 +31,7 @@ namespace stream_cloud {
 
                 boost::asio::ip::address address_ =  boost::asio::ip::make_address("127.0.0.1");
 
-                auto string_port = "8081";
+                auto string_port = ctx->config()["ws-port"].as<std::string>();
                 auto tmp_port = std::stoul(string_port);
 
                 auto port = static_cast<unsigned short>(tmp_port);

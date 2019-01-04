@@ -5,6 +5,7 @@
 
 #include <forwards.hpp>
 #include <dynamic.hpp>
+#include <json/value.hpp>
 
 
 namespace stream_cloud {
@@ -15,7 +16,7 @@ namespace stream_cloud {
 
             virtual auto env() -> environment::abstract_environment * = 0;
 
-         //   virtual auto config() const -> dynamic_config & = 0;
+            virtual auto config() const -> api::json::json_map & = 0;
 
             virtual boost::asio::io_service &main_loop() const = 0;
 

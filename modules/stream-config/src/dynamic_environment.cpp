@@ -47,6 +47,12 @@ namespace stream_cloud {
                 return *background_;
             }
 
+            auto config() -> api::json::json_map & {
+                return configuration_.dynamic_configuration;
+            }
+
+            ///Config
+            configuration configuration_;
 
             environment::cooperation cooperation_;
             std::unique_ptr<executor::abstract_coordinator> coordinator_;
@@ -87,7 +93,9 @@ namespace stream_cloud {
 
         }
 
-        dynamic_environment::dynamic_environment() : pimpl(new impl) {
+        dynamic_environment::dynamic_environment(configuration &&config) : pimpl(new impl) {
+
+            pimpl->configuration_ = config;
 
             std::shared_ptr<boost::asio::signal_set> sigint_set(
                     new boost::asio::signal_set(main_loop(), SIGINT, SIGTERM));
@@ -127,6 +135,10 @@ namespace stream_cloud {
 
         executor::abstract_coordinator &dynamic_environment::manager_execution_device() {
             return *pimpl->coordinator_;
+        }
+
+        auto dynamic_environment::config() const -> api::json::json_map & {
+            return pimpl->config();
         }
 
        environment::cooperation &dynamic_environment::manager_group() {

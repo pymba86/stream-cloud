@@ -73,7 +73,7 @@ namespace stream_cloud {
 
                 ~response_message() = default;
 
-                response_message(std::string id, json::json_value result = json::json_value())
+                explicit response_message(std::string id, json::json_value result = json::json_value())
                         : id(std::move(id)), result(std::move(result)) {}
 
 
@@ -149,9 +149,9 @@ namespace stream_cloud {
 
             bool parse(const std::string &raw, request_message &request);
 
-            bool parse(const json::json_value &message, notify_message &notify);
+            bool parse(const json::json_map &message, notify_message &notify);
 
-            bool parse(const json::json_value &message, response_message &response);
+            bool parse(const json::json_map &message, response_message &response);
 
             std::string serialize(const request_message &msg);
 

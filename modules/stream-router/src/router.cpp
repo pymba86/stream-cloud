@@ -13,20 +13,24 @@
 #include <thread>
 #include <task.hpp>
 #include <json-rpc.hpp>
+#include <context.hpp>
 
 namespace stream_cloud {
     namespace router {
         class router::impl final {
         public:
-            impl() = default;
+            impl(const api::json::json_map& config): config_(config) {};
 
             ~impl() = default;
+
+            api::json::json_map config_;
         };
 
         router::router(config::config_context_t *ctx) :
-                abstract_service(ctx, "router"),
-                pimpl(std::make_unique<impl>()) {
+                abstract_service(ctx, "router") {
 
+            auto config = ctx->config();
+            pimpl = std::make_unique<impl>(config);
 
             attach(
                     behavior::make_handler(
@@ -34,53 +38,37 @@ namespace stream_cloud {
                             [this](behavior::context &ctx) -> void {
                                 auto transport = ctx.message().body<api::transport>();
                                 auto transport_type = transport->type();
-                                std::string response = str(
-                                        boost::format(R"({ "method": "platform", "id": "%1%"})") % transport->id());
-
-                                api::task task_;
-                                api::json_rpc::parse(response,task_.request);
 
                                 if (transport_type == api::transport_type::ws) {
+
                                     auto ws_response = new api::web_socket(transport->id());
+                                    auto *ws = static_cast<api::web_socket *>(transport.get());
 
-                                    ws_response->body = response;
+                                    api::task task_;
+                                    api::json_rpc::parse(ws->body,task_.request);
 
-                                    ctx->addresses("ws")->send(
-                                            messaging::make_message(
-                                                    ctx->self(),
-                                                    "write",
-                                                    api::transport(ws_response)
-                                            )
-                                    );
+                                    if (task_.request.method == "get_settings") {
+                                        api::json_rpc::response_cmessage response(
+                                                "2",
+                                                pimpl->config_);
+
+                                        ws_response->body = api::json_rpc::serialize(response);
+
+                                        ctx->addresses("ws")->send(
+                                                messaging::make_message(
+                                                        ctx->self(),
+                                                        "write",
+                                                        api::transport(ws_response)
+                                                )
+                                        );
+                                    }
+
                                     return;
                                 }
 
-                                auto http_response = new api::http(transport->id());
-                                auto *http = static_cast<api::http *>(transport.get());
 
 
-                                if (transport_type == api::transport_type::http && http->uri() == "/system") {
 
-                                    http_response->header("Content-Type", "application/json");
-                                    http_response->body(response);
-
-                                    ctx->addresses("http")->send(
-                                            messaging::make_message(
-                                                    ctx->self(),
-                                                    "write",
-                                                    api::transport(http_response)
-                                            )
-                                    );
-                                } else if (transport_type == api::transport_type::http) {
-
-                                    ctx->addresses("http")->send(
-                                            messaging::make_message(
-                                                    ctx->self(),
-                                                    "close",
-                                                    api::transport(http_response)
-                                            )
-                                    );
-                                }
 
 
                             }

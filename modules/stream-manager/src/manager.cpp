@@ -114,7 +114,7 @@ void init_service(config::dynamic_environment&env) {
 
     auto& storage = env.add_service<storage_t>();
     auto& ws = env.add_data_provider<client::ws_client::ws_client>(storage->entry_point());
-    auto& http = env.add_data_provider<providers::http_server::http_server>(storage->entry_point(), "8090");
+    auto& http = env.add_data_provider<providers::http_server::http_server>(storage->entry_point());
 
     storage->add_shared(http.address().operator->());
     storage->add_shared(ws.address().operator->());
@@ -126,7 +126,11 @@ int main(int argc, char **argv) {
 
     ::signal(SIGSEGV,&signal_sigsegv);
 
-    config::dynamic_environment env;
+    config::configuration config;
+
+    config::load_or_generate_config(config);
+
+    config::dynamic_environment env(std::move(config));
     init_service(env);
     env.initialize();
 

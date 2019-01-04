@@ -51,7 +51,7 @@ add_library(
         ${SOURCE_FILES}
         ${HEADER_JSON_FILES}
         ${HEADER_FILES}
-)
+        ../stream-config/src/configuration.hpp)
 
 
 set_target_properties( ${PROJECT} PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src)

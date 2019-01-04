@@ -7,7 +7,7 @@ namespace stream_cloud {
 
         class router: public config::abstract_service {
         public:
-            router(config::config_context_t *ctx);
+            explicit router(config::config_context_t *ctx);
 
             ~router();
 

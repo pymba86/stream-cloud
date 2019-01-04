@@ -2,11 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 set(CURRENT_TARGET stream-manager)
 
-add_compile_options(
-        -v
-        -fno-rtti
-)
-
+add_compile_options(-std=c++14)
 
 add_executable(${CURRENT_TARGET} src/manager.cpp )
 

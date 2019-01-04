@@ -168,7 +168,7 @@ int main(int argc, char** argv)
 
     auto const host = "127.0.0.1";
     auto const port = "8081";
-    auto const text = "123";
+    auto const text = "{'id': '1', 'method': 'get_settings', 'params': ''}";
 
     // The io_context is required for all I/O
     boost::asio::io_context ioc;
