@@ -36,21 +36,18 @@ namespace stream_cloud {
                 std::shared_ptr<ws_session> session_;
             };
 
-            ws_client::ws_client(config::config_context_t *ctx, actor::actor_address address):data_provider(ctx,"client"),pimpl(new impl) {
-
-
-
-              //  api::transport_id id_= static_cast<api::transport_id>(std::chrono::duration_cast<std::chrono::microseconds>(clock::now().time_since_epoch()).count());
+            ws_client::ws_client(config::config_context_t *ctx, actor::actor_address address)
+                    : data_provider(ctx, "client"), pimpl(new impl) {
 
                 pimpl->session_ = std::make_shared<ws_session>(ctx->main_loop(), 0, address);
-
 
                 attach(
                         behavior::make_handler(
                                 "write",
-                                [this](behavior::context& ctx) -> void {
+                                [this](behavior::context &ctx) -> void {
                                     auto t = ctx.message().body<api::transport>();
-                                    std::unique_ptr<api::web_socket> transport(static_cast<api::web_socket*>(t.release()));
+                                    std::unique_ptr<api::web_socket> transport(
+                                            static_cast<api::web_socket *>(t.release()));
                                     pimpl->session_->write(std::move(transport));
                                 }
                         )
@@ -62,10 +59,9 @@ namespace stream_cloud {
             ws_client::~ws_client() = default;
 
             void ws_client::startup(config::config_context_t *ctx) {
-                std::string address_ =  "127.0.0.1";
-                auto string_port = "8081";
+                std::string address_ = ctx->config()["client"]["ip"].as<std::string>();
+                auto string_port = ctx->config()["client"]["port"].as<std::string>();
                 pimpl->session_->run(address_, string_port);
-
             }
 
             void ws_client::shutdown() {

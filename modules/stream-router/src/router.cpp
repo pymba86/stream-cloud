@@ -19,7 +19,7 @@ namespace stream_cloud {
     namespace router {
         class router::impl final {
         public:
-            impl(const api::json::json_map& config): config_(config) {};
+            impl(const api::json::json_map &config) : config_(config) {};
 
             ~impl() = default;
 
@@ -45,30 +45,34 @@ namespace stream_cloud {
                                     auto *ws = static_cast<api::web_socket *>(transport.get());
 
                                     api::task task_;
-                                    api::json_rpc::parse(ws->body,task_.request);
+                                    api::json_rpc::parse(ws->body, task_.request);
 
                                     if (task_.request.method == "get_settings") {
-                                        api::json_rpc::response_cmessage response(
+                                        api::json_rpc::response_message response(
                                                 "2",
                                                 pimpl->config_);
 
                                         ws_response->body = api::json_rpc::serialize(response);
+                                    } else {
+                                        api::json_rpc::response_message response("2","");
+                                        api::json_rpc::response_error error(
+                                                api::json_rpc::error_code::methodNot_found,
+                                                "method not found");
+                                        response.error = error;
 
-                                        ctx->addresses("ws")->send(
-                                                messaging::make_message(
-                                                        ctx->self(),
-                                                        "write",
-                                                        api::transport(ws_response)
-                                                )
-                                        );
+                                        ws_response->body = api::json_rpc::serialize(response);
                                     }
+
+                                    ctx->addresses("ws")->send(
+                                            messaging::make_message(
+                                                    ctx->self(),
+                                                    "write",
+                                                    api::transport(ws_response)
+                                            )
+                                    );
 
                                     return;
                                 }
-
-
-
-
 
 
                             }
