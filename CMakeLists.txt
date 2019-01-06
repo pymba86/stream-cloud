@@ -12,14 +12,16 @@ list(APPEND BOOST_COMPONENTS
 find_package (Boost 1.68  REQUIRED COMPONENTS ${BOOST_COMPONENTS})
 include_directories (${Boost_INCLUDE_DIR})
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_ASIO_HAS_MOVE -DCXXOPTS_NO_RTTI" CACHE STRING "compile flags" FORCE)
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSQLITE_THREADSAFE=1 -DBOOST_ASIO_HAS_MOVE -DCXXOPTS_NO_RTTI" CACHE STRING "compile flags" FORCE)
 
 
-add_compile_options(
-        -v
-        -Wall
-        -Wextra
-)
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+# set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 include_directories(modules/stream-api/src)
 include_directories(modules/stream-core/src)
@@ -30,6 +32,8 @@ include_directories(modules/stream-router/src)
 include_directories(modules/stream-platform/src)
 include_directories(modules/stream-manager/src)
 include_directories(modules/stream-client/src)
+include_directories(modules/stream-settings/src)
+include_directories(modules/stream-storage/src)
 
 add_subdirectory(modules/stream-core)
 add_subdirectory(modules/stream-api)
@@ -40,5 +44,7 @@ add_subdirectory(modules/stream-router)
 add_subdirectory(modules/stream-platform)
 add_subdirectory(modules/stream-manager)
 add_subdirectory(modules/stream-client)
+add_subdirectory(modules/stream-settings)
+add_subdirectory(modules/stream-storage)
 add_subdirectory(examples/websocket)
 

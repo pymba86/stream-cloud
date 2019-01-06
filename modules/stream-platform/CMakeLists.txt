@@ -14,6 +14,7 @@ target_link_libraries(
         ${Boost_LIBRARIES}
         stream-core
         stream-config
+        stream-settings
         stream-api
         stream-io
         stream-providers

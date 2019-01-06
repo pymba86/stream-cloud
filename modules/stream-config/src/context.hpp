@@ -4,7 +4,6 @@
 #include <boost/thread.hpp>
 
 #include <forwards.hpp>
-#include <dynamic.hpp>
 #include <json/value.hpp>
 
 

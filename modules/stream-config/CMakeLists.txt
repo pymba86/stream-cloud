@@ -14,20 +14,15 @@ add_compile_options(
 
 
 list(APPEND HEADER_FILES
-        src/forward.hpp
-        src/dynamic.hpp
-        src/object.hpp
-        src/constructors.hpp
-        src/converters.hpp
         src/context.hpp
         src/data_provider.hpp
         src/abstract_service.hpp
         src/dynamic_environment.hpp
         src/configuration.hpp
+        src/forward.hpp
         )
 
 list(APPEND SOURCE_FILES
-        src/dynamic.cpp
         src/data_provider.cpp
         src/abstract_service.cpp
         src/dynamic_environment.cpp
@@ -37,8 +32,7 @@ list(APPEND SOURCE_FILES
 add_library(
         ${PROJECT}
         ${SOURCE_FILES}
-        ${HEADER_FILES}
-        src/configuration.cpp)
+        ${HEADER_FILES})
 
 
 set_target_properties( ${PROJECT} PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/src)

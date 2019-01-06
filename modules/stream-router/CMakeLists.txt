@@ -34,6 +34,7 @@ target_link_libraries(${PROJECT}
         stream-core
         stream-api
         stream-config
+        stream-storage
         stream-io
         stream-providers
         )
@@ -42,7 +43,7 @@ target_include_directories(
         ${PROJECT}
         PUBLIC
         stream-core
-        stream-api
+        stream-storage
         stream-config
         stream-io
         stream-providers
