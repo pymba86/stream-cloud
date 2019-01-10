@@ -5,7 +5,7 @@ set(CURRENT_TARGET stream-platform)
 
 add_compile_options(-std=c++14)
 
-add_executable(${CURRENT_TARGET} src/platform.cpp)
+add_executable(${CURRENT_TARGET} src/platform.cpp src/profile.hpp src/managers.hpp)
 
 
 
