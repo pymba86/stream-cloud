@@ -4,10 +4,13 @@
 #include <http/http_server.hpp>
 #include <ws/ws_server.hpp>
 #include <settings.hpp>
+#include "profile.hpp"
+#include "managers.hpp"
 
 #include <map>
 
 #include <boost/stacktrace.hpp>
+#include "router.hpp"
 
 
 using namespace stream_cloud;
@@ -32,14 +35,21 @@ void signal_sigsegv(int signum) {
 
 void init_service(config::dynamic_environment &env) {
 
-    auto &router = env.add_service<router::router>();
+    auto &router = env.add_service<platform::router>();
     auto &http = env.add_data_provider<providers::http_server::http_server>(router->entry_point());
     auto &ws = env.add_data_provider<providers::ws_server::ws_server>(router->entry_point());
     auto &settings = env.add_service<settings::settings>();
+    auto &profile = env.add_service<platform::profile>();
+    auto &managers = env.add_service<platform::managers>();
+
+    profile->add_shared(ws.address().operator->());
 
     router->add_shared(http.address().operator->());
     router->add_shared(ws.address().operator->());
+    profile->join(router);
     router->join(settings);
+    router->join(profile);
+    router->join(managers);
 
 }
 

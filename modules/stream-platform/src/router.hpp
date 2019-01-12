@@ -3,7 +3,7 @@
 #include <abstract_service.hpp>
 
 namespace stream_cloud {
-    namespace router {
+    namespace platform {
 
         class router: public config::abstract_service {
         public:

@@ -16,7 +16,6 @@ target_link_libraries(
         stream-api
         stream-io
         stream-providers
-        stream-router
         stream-client
         dl
 )

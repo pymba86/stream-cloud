@@ -52,6 +52,7 @@ namespace stream_cloud {
                 json::json_value id;
                 std::string method;
                 json::json_value params;
+                json::json_map metadata;
             };
 
             struct response_error final {
@@ -158,6 +159,8 @@ namespace stream_cloud {
             std::string serialize(const response_message &msg);
 
             std::string serialize(const notify_message &msg);
+
+            bool contains(const json::json_map &msg, const std::string &key);
 
         }
     }

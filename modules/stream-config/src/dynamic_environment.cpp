@@ -146,6 +146,7 @@ namespace stream_cloud {
         }
 
         auto dynamic_environment::add_service(abstract_service *service_ptr) -> service & {
+            service_ptr->startup(context());
             return manager_group().created_group(service_ptr);
         }
 

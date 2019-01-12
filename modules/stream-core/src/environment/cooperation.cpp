@@ -1,4 +1,5 @@
 #include <environment/cooperation.hpp>
+#include "cooperation.hpp"
 
 
 namespace stream_cloud {

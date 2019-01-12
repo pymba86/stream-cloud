@@ -8,11 +8,8 @@ add_compile_options(-std=c++14)
 
 message (STATUS "${PROJECT_NAME} : CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}")
 
-add_compile_options(
-        -v
-)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -pthread ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread ")
 
 
 list(APPEND HEADER_FILES
@@ -59,8 +56,7 @@ set_target_properties( ${PROJECT} PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_S
 target_link_libraries(    ${PROJECT}        ${Boost_LIBRARIES}  stream-config
         stream-core
         stream-io
-        stream-providers
-        stream-router)
+        stream-providers)
 
 target_include_directories(
         ${PROJECT}
@@ -69,5 +65,4 @@ target_include_directories(
         stream-core
         stream-io
         stream-providers
-        stream-router
 )

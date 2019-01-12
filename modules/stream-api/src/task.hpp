@@ -12,6 +12,7 @@ namespace stream_cloud {
             ~task() = default;
 
             json_rpc::request_message request;
+            transport_id transport_id_;
 
         };
     }

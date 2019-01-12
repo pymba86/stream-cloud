@@ -1,8 +1,23 @@
-//
-// Created by pymba86 on 06.01.19.
-//
+#pragma once
 
-#ifndef PROJECT_PROFILE_HPP
-#define PROJECT_PROFILE_HPP
+#include <abstract_service.hpp>
 
-#endif //PROJECT_PROFILE_HPP
+namespace stream_cloud {
+
+    namespace platform {
+
+        class profile: public config::abstract_service {
+        public:
+            explicit profile(config::config_context_t *ctx);
+
+            ~profile() = default;
+
+            void startup(config::config_context_t *) override;
+
+            void shutdown() override;
+        private:
+            class impl;
+            std::unique_ptr<impl> pimpl;
+        };
+    }
+}

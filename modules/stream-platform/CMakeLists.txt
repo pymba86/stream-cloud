@@ -5,7 +5,15 @@ set(CURRENT_TARGET stream-platform)
 
 add_compile_options(-std=c++14)
 
-add_executable(${CURRENT_TARGET} src/platform.cpp src/profile.hpp src/managers.hpp)
+add_executable(${CURRENT_TARGET}
+        src/platform.cpp
+        src/profile.hpp
+        src/managers.hpp
+        src/managers.cpp
+        src/profile.cpp
+        src/router.hpp
+        src/router.cpp
+        )
 
 
 
@@ -18,6 +26,6 @@ target_link_libraries(
         stream-api
         stream-io
         stream-providers
-        stream-router
+        stream-storage
         dl
 )

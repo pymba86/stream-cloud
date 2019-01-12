@@ -39,6 +39,13 @@ namespace stream_cloud {
                     request.params = message["params"];
                 }
 
+                if (contains(message, "metadata")) {
+                    request.metadata = message["metadata"].as<json::json_map>();
+                } else {
+                    json::json_map metadata;
+                    request.metadata = metadata;
+                }
+
                 return true;
 
             }

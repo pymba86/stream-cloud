@@ -45,5 +45,4 @@ target_include_directories(
         stream-config
         stream-core
         stream-providers
-        stream-router
 )
