@@ -13,7 +13,7 @@ namespace stream_cloud {
         };
 
 
-        using transport_id = std::size_t ;
+        using transport_id = std::string ;
 
         class transport_base : public intrusive_base<transport_base>  {
         public:

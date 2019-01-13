@@ -64,7 +64,7 @@ namespace stream_cloud {
                 if (ec) {
                     fail(ec, "accept");
                 } else {
-                    api::transport_id id_= static_cast<api::transport_id>(std::chrono::duration_cast<std::chrono::microseconds>(clock::now().time_since_epoch()).count());
+                    api::transport_id id_=  std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(clock::now().time_since_epoch()).count());
                     auto session = std::make_shared<ws_session>(std::move(socket_),id_,pipe_);
                     storage_sessions.emplace(id_,std::move(session));
                     storage_sessions.at(id_)->run();
@@ -75,8 +75,12 @@ namespace stream_cloud {
             }
 
             void ws_listener::write(const intrusive_ptr<api::web_socket>& ptr) {
-               auto session = storage_sessions.at(ptr->id());
-               session->write(ptr);
+
+                if (storage_sessions.count(ptr->id())) {
+                    auto session = storage_sessions.at(ptr->id());
+                    session->write(ptr);
+                }
+
             }
 
         }

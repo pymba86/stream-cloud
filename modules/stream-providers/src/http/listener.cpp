@@ -65,7 +65,7 @@ namespace stream_cloud {
                 if (ec) {
                    // fail(ec, "accept");
                 } else {
-                    auto id_= static_cast<api::transport_id>(std::chrono::duration_cast<std::chrono::microseconds>(clock::now().time_since_epoch()).count());
+                    auto id_= std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(clock::now().time_since_epoch()).count());
                     auto session = std::make_shared<http_session>(std::move(socket_),id_,*this);
                     storage_session.emplace(id_,std::move(session));
                     storage_session.at(id_)->run();

@@ -36,7 +36,6 @@ namespace stream_cloud {
 
                 auto* ws = new api::web_socket (id_);
                 ws->body = boost::beast::buffers_to_string(buffer_.data());
-               // api::transport ws_data(ws);
                 pipe_->send(
                         messaging::make_message(
                                 pipe_,
@@ -45,19 +44,7 @@ namespace stream_cloud {
                         )
                 );
 
-             /*   ws_.text(ws_.got_text());
-                ws_.async_write(
-                        buffer_.data(),
-                        boost::asio::bind_executor(
-                                strand_,
-                                std::bind(
-                                        &ws_session::on_write,
-                                        shared_from_this(),
-                                        std::placeholders::_1,
-                                        std::placeholders::_2
-                                )
-                        )
-                );*/
+                buffer_.consume(buffer_.size());
 
                 // If we aren't at the queue limit, try to pipeline another request
                 if (!queue_.is_full()) {
@@ -104,7 +91,7 @@ namespace stream_cloud {
                 );
             }
 
-            ws_session::ws_session(tcp::socket socket,std::size_t id, actor::actor_address pipe_) :
+            ws_session::ws_session(tcp::socket socket,api::transport_id id, actor::actor_address pipe_) :
                     ws_(std::move(socket)),
                     strand_(ws_.get_executor()),
                     id_(id),

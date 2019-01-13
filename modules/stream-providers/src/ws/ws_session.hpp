@@ -128,7 +128,7 @@ namespace stream_cloud {
 
                 void on_write(boost::system::error_code ec, std::size_t bytes_transferred);
 
-                const size_t id_;
+                const api::transport_id id_;
 
 
             public:

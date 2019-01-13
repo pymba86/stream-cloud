@@ -30,7 +30,7 @@ namespace stream_cloud {
                 return managers_reg.find(manager_key) != managers_reg.end();
             }
 
-            bool is_reg_manager(const api::transport_id id) const {
+            bool is_reg_manager_id(const api::transport_id id) const {
 
                 auto it = std::find_if(std::begin(managers_reg), std::end(managers_reg), [&](auto &&p) {
                     return p.second == id;
@@ -90,7 +90,7 @@ namespace stream_cloud {
 
                                         // parse request
                                         api::task task_;
-                                        task_.transport_id_ = transport->id();
+                                        task_.transport_id_ = ws->id();
                                         api::json_rpc::parse(ws->body, task_.request);
 
                                         // get name service and method call
@@ -116,7 +116,7 @@ namespace stream_cloud {
                                                             manager_key);
 
                                                     api::json::json_map metadata;
-                                                    metadata["transport"] = {transport->id()};
+                                                    metadata["transport"] = {ws->id()};
 
                                                     // send request to manager
                                                     auto ws_response = new api::web_socket(manager_transport_id);
@@ -126,7 +126,7 @@ namespace stream_cloud {
                                                     notify_manager_message.params = task_.request.params;
                                                     notify_manager_message.metadata = metadata;
 
-                                                    ws_response->body = ws->body;
+                                                    ws_response->body = api::json_rpc::serialize(notify_manager_message);
 
                                                     ctx->addresses("ws")->send(
                                                             messaging::make_message(
@@ -208,7 +208,7 @@ namespace stream_cloud {
                                     } else if (api::json_rpc::is_response(message)) {
 
                                         // Отправляем ответ от проверенного менеджера клиенту
-                                        if (pimpl->is_reg_manager(transport->id())) {
+                                        if (pimpl->is_reg_manager_id(ws->id())) {
 
                                             api::json_rpc::response_message response_message;
                                             api::json_rpc::parse(ws->body, response_message);
@@ -223,7 +223,9 @@ namespace stream_cloud {
 
                                             for (auto const &id : transports_id) {
 
-                                                auto ws_response = new api::web_socket(id);
+                                                const auto &transport_id = id.as<std::string>();
+
+                                                auto ws_response = new api::web_socket(transport_id);
                                                 ws_response->body = response;
 
                                                 ctx->addresses("ws")->send(
