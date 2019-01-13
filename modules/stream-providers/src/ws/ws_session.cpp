@@ -36,12 +36,12 @@ namespace stream_cloud {
 
                 auto* ws = new api::web_socket (id_);
                 ws->body = boost::beast::buffers_to_string(buffer_.data());
-                api::transport ws_data(ws);
+               // api::transport ws_data(ws);
                 pipe_->send(
                         messaging::make_message(
                                 pipe_,
                                 dispatcher,
-                                std::move(ws_data)
+                                api::transport(ws)
                         )
                 );
 

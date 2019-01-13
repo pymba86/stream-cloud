@@ -42,11 +42,22 @@ void init_service(config::dynamic_environment &env) {
     auto &profile = env.add_service<platform::profile>();
     auto &managers = env.add_service<platform::managers>();
 
+    // Профиль
     profile->add_shared(ws.address().operator->());
+    profile->join(router);
 
+    // Менеджер
+    managers->add_shared(ws.address().operator->());
+    managers->add_shared(http.address().operator->());
+    managers->join(router);
+
+    // Настройки
+
+
+    // Роутер
     router->add_shared(http.address().operator->());
     router->add_shared(ws.address().operator->());
-    profile->join(router);
+
     router->join(settings);
     router->join(profile);
     router->join(managers);

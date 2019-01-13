@@ -30,7 +30,8 @@
 
         function onOpen(evt){
             alert("CONNECTED");
-            doSend('{"id": "1", "method": "get_settings", params: ""}');
+            doSend('{"id":"1","method":"managers.lst","params":{"key":"pymba86.test"}, ,"metadata":{"profile-key":"pymba86.123"}}');
+            doSend('{"id":"1","method":"managers.list","params":{"key":"pymba86.test"}, ,"metadata":{"profile-key":"pymba86.123"}}');
         }
 
         function onClose(evt){

@@ -71,6 +71,16 @@ namespace stream_cloud {
 
                 attach(
                         behavior::make_handler(
+                                "remove_trusted_url",
+                                [this](behavior::context& ctx) -> void {
+                                    auto app_name =ctx.message().body<std::string>();
+                                    pimpl->listener_->remove_trusted_url(app_name);
+                                }
+                        )
+                );
+
+                attach(
+                        behavior::make_handler(
                                 "close",
                                 [this](behavior::context& ctx) -> void {
                                     auto t = ctx.message().body<api::transport>();

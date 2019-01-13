@@ -21,13 +21,7 @@ namespace stream_cloud {
             }
 
 
-            bool parse(const std::string &raw, request_message &request) {
-
-                json::json_map message{json::data{raw}};
-
-                if (!is_request(message)) {
-                    return false;
-                }
+            bool parse(const json::json_map &message, request_message &request) {
 
                 request.id = message["id"];
 
@@ -52,9 +46,6 @@ namespace stream_cloud {
 
             bool parse(const json::json_map &message, notify_message &notify) {
 
-                if (!is_notify(message)) {
-                    return false;
-                }
 
                 notify.method = message["method"].as<std::string>();
 
@@ -64,17 +55,27 @@ namespace stream_cloud {
                     notify.params = message["params"];
                 }
 
+                if (contains(message, "metadata")) {
+                    notify.metadata = message["metadata"].as<json::json_map>();
+                } else {
+                    json::json_map metadata;
+                    notify.metadata = metadata;
+                }
+
                 return true;
             }
 
             bool parse(const json::json_map &message, response_message &response) {
 
-                if (!is_response(message)) {
-                    return false;
-                }
-
                 response.id = message["id"];
                 response.result = message["result"];
+
+                if (contains(message, "metadata")) {
+                    response.metadata = message["metadata"].as<json::json_map>();
+                } else {
+                    json::json_map metadata;
+                    response.metadata = metadata;
+                }
 
                 return true;
             }
@@ -91,6 +92,10 @@ namespace stream_cloud {
                 }
 
                 obj["id"] = msg.id;
+
+                if (!msg.metadata.empty()) {
+                    obj["metadata"] = msg.metadata;
+                }
 
                 return obj.to_string();
             }

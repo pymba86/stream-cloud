@@ -90,6 +90,10 @@ namespace stream_cloud {
                 trusted_url.emplace(std::move(name));
             }
 
+            void listener::remove_trusted_url(std::string name) {
+                trusted_url.erase(name);
+            }
+
             auto listener::check_url(const std::string &url) const -> bool {
                 ///TODO: not fast
                 auto start = url.begin();

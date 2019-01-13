@@ -80,16 +80,23 @@ namespace stream_cloud {
 
                 json::json_value id;
                 json::json_value result;
+                json::json_map metadata;
                 boost::optional<response_error> error;
             };
 
             struct notify_message final {
+
+                notify_message() = default;
+
+                ~notify_message() = default;
+
                 notify_message(std::string method, json::json_value params = json::json_value()) :
                         method(std::move(method)),
                         params(std::move(params)) {}
 
                 std::string method;
                 json::json_value params;
+                json::json_map metadata;
             };
 
 
@@ -148,7 +155,7 @@ namespace stream_cloud {
 
             ///Experimental }
 
-            bool parse(const std::string &raw, request_message &request);
+            bool parse(const json::json_map &message, request_message &request);
 
             bool parse(const json::json_map &message, notify_message &notify);
 
@@ -161,6 +168,12 @@ namespace stream_cloud {
             std::string serialize(const notify_message &msg);
 
             bool contains(const json::json_map &msg, const std::string &key);
+
+            bool is_notify(const json::json_map &msg);
+
+            bool is_request(const json::json_map &msg);
+
+            bool is_response(const json::json_map &msg);
 
         }
     }

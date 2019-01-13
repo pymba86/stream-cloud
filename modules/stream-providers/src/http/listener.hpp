@@ -30,6 +30,8 @@ namespace stream_cloud {
 
                 void add_trusted_url(std::string name);
 
+                void remove_trusted_url(std::string name);
+
                 auto check_url(const std::string &) const  -> bool override;
 
                 auto operator()(http::request <http::string_body>&& ,api::transport_id ) const -> void override;
