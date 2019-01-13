@@ -88,6 +88,8 @@ namespace stream_cloud {
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
 
                         if (!login_param.empty() || !password_param.empty()) {
 
@@ -96,19 +98,30 @@ namespace stream_cloud {
                             try {
                                 pimpl->db_ << "select login, password from profile where login = ? limit 1;"
                                            << login_param
-                                           >> tie(login, password);
+                                           >> [&](unique_ptr<string> login_p, unique_ptr<string> password_p) {
+                                               login = login_p ? *login_p : string();
+                                               password = password_p ? *password_p : string();
+                                           };
 
                                 if (password_param == password) {
-                                    ws_response->body = login + "." + password;
+                                    response_message.result = login + "." + password;
                                 } else {
-                                    ws_response->body = "username or password is incorrect";
+                                    response_message.error = api::json_rpc::response_error(
+                                            api::json_rpc::error_code::unknown_error_code,
+                                            "login or password is incorrect");
                                 }
                             } catch (exception &e) {
-                                ws_response->body = e.what();
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        e.what());
                             }
                         } else {
-                            ws_response->body = "login or password empty";
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "login or password empty");
                         }
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
 
                         ctx->addresses("ws")->send(
                                 messaging::make_message(
@@ -135,13 +148,13 @@ namespace stream_cloud {
 
                             task.storage.emplace("profile.login", profile[0]);
 
-                                ctx->addresses("router")->send(
-                                        messaging::make_message(
-                                                ctx->self(),
-                                                "service",
-                                                std::move(task)
-                                        )
-                                );
+                            ctx->addresses("router")->send(
+                                    messaging::make_message(
+                                            ctx->self(),
+                                            "service",
+                                            std::move(task)
+                                    )
+                            );
                             return;
 
                         } else {

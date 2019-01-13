@@ -5,7 +5,7 @@
 namespace stream_cloud {
     namespace providers {
         namespace ws_server {
-            constexpr const  char* dispatcher = "dispatcher";
+            constexpr const char *dispatcher = "dispatcher";
 
             void ws_session::on_write(boost::system::error_code ec, std::size_t bytes_transferred) {
                 boost::ignore_unused(bytes_transferred);
@@ -26,15 +26,15 @@ namespace stream_cloud {
             void ws_session::on_read(boost::system::error_code ec, std::size_t bytes_transferred) {
                 boost::ignore_unused(bytes_transferred);
 
-                if(ec == websocket::error::closed) {
+                if (ec == websocket::error::closed) {
                     return;
                 }
 
-                if(ec) {
-                    fail(ec, "read");
+                if (ec) {
+                    return;
                 }
 
-                auto* ws = new api::web_socket (id_);
+                auto *ws = new api::web_socket(id_);
                 ws->body = boost::beast::buffers_to_string(buffer_.data());
                 pipe_->send(
                         messaging::make_message(
@@ -68,7 +68,7 @@ namespace stream_cloud {
             }
 
             void ws_session::on_accept(boost::system::error_code ec) {
-                if(ec) {
+                if (ec) {
                     return fail(ec, "accept");
                 }
 
@@ -77,7 +77,7 @@ namespace stream_cloud {
 
             void ws_session::run() {
                 ws_.async_accept_ex(
-                        [](websocket::response_type& res) {
+                        [](websocket::response_type &res) {
 
                         },
                         boost::asio::bind_executor(
@@ -91,16 +91,16 @@ namespace stream_cloud {
                 );
             }
 
-            ws_session::ws_session(tcp::socket socket,api::transport_id id, actor::actor_address pipe_) :
+            ws_session::ws_session(tcp::socket socket, api::transport_id id, actor::actor_address pipe_) :
                     ws_(std::move(socket)),
                     strand_(ws_.get_executor()),
                     id_(id),
                     pipe_(pipe_),
-                    queue_(*this){
+                    queue_(*this) {
                 setup_stream(ws_);
             }
 
-            void ws_session::write(const intrusive_ptr<api::web_socket>& ptr) {
+            void ws_session::write(const intrusive_ptr<api::web_socket> &ptr) {
 
                 queue_(ptr->body);
             }
