@@ -15,9 +15,39 @@ namespace stream_cloud {
         public:
             impl(sqlite::database &db) : db_(db) {};
 
+            bool is_reg_manager(const std::string &manager_key) const {
+                return managers_reg.find(manager_key) != managers_reg.end();
+            }
+
+            bool is_reg_manager_id(const api::transport_id id) const {
+
+                auto it = std::find_if(std::begin(managers_reg), std::end(managers_reg), [&](auto &&p) {
+                    return p.second == id;
+                });
+
+                return it != std::end(managers_reg);
+            }
+
+            void add_reg_manager(const std::string &manager_key, api::transport_id transport_id) {
+                managers_reg.emplace(manager_key, transport_id);
+            }
+
+            void remove_reg_manager(const std::string &manager_key) {
+                managers_reg.erase(manager_key);
+            }
+
+            api::transport_id get_manager_transport_id(const std::string &key) const {
+                return managers_reg.at(key);
+            }
+
             ~impl() = default;
 
             sqlite::database db_;
+
+        private:
+            // Список подключенных менеджеров
+            // Необходим для меньших запросов к базе данных (кэш)
+            std::unordered_map<std::string, api::transport_id> managers_reg;
         };
 
         managers::managers(config::config_context_t *ctx) : abstract_service(ctx, "managers") {
@@ -25,9 +55,6 @@ namespace stream_cloud {
 
             attach(
                     behavior::make_handler("add", [this](behavior::context &ctx) -> void {
-                        // add_trusted_url - http
-                        // Добавляем название, ключ
-                        // write - ws
 
                         auto &task = ctx.message().body<api::task>();
 
@@ -88,10 +115,7 @@ namespace stream_cloud {
 
             attach(
                     behavior::make_handler("delete", [this](behavior::context &ctx) -> void {
-                        // remove_trusted_url - http
-                        // disconnect - managers
-                        // Удаляем менеджера
-                        // write - ws
+                        // Удаление менеджера
 
                         auto &task = ctx.message().body<api::task>();
 
@@ -123,15 +147,7 @@ namespace stream_cloud {
                                         )
                                 );
 
-                                task.storage.emplace("manager.key", key);
-
-                                ctx->addresses("router")->send(
-                                        messaging::make_message(
-                                                ctx->self(),
-                                                "unregister_manager",
-                                                std::move(task)
-                                        )
-                                );
+                                pimpl->remove_reg_manager(key);
 
                             } catch (exception &e) {
                                 response_message.error = api::json_rpc::response_error(
@@ -161,7 +177,6 @@ namespace stream_cloud {
             attach(
                     behavior::make_handler("list", [this](behavior::context &ctx) -> void {
                         // Получить список менеджеров у пользователя
-                        // write - ws
 
                         auto &task = ctx.message().body<api::task>();
 
@@ -211,8 +226,7 @@ namespace stream_cloud {
 
             attach(
                     behavior::make_handler("connect", [this](behavior::context &ctx) -> void {
-                        // Добавляем / Меняем статус в базе данных / Проверяет на наличие
-                        // register_manager - router
+                        // Подключаемя к платформе
 
                         auto &task = ctx.message().body<api::task>();
 
@@ -221,40 +235,47 @@ namespace stream_cloud {
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
 
-                        try {
+                        if (pimpl->is_reg_manager(key)) {
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "manager already connect");
+                        } else {
 
-                            // Проверяем на наличие
-                            int count_managers_key = 0;
-                            pimpl->db_ << "select count(*) from managers where key = ? and profile_login = ?"
-                                       << key
-                                       << profile_login
-                                       >> count_managers_key;
+                            try {
 
-                            if (count_managers_key > 0) {
-                                pimpl->db_ << "update managers set status = 1 where key = ? and profile_login = ?;"
+                                // Проверяем на наличие
+                                int count_managers_key = 0;
+                                pimpl->db_ << "select count(*) from managers where key = ? and profile_login = ?"
                                            << key
-                                           << profile_login;
+                                           << profile_login
+                                           >> count_managers_key;
 
-                                ws_response->body = "connect manager: " + profile_login + "/" + key;
+                                if (count_managers_key > 0) {
+                                    pimpl->db_ << "update managers set status = 1 where key = ? and profile_login = ?;"
+                                               << key
+                                               << profile_login;
 
-                                task.storage.emplace("manager.key", key);
+                                    response_message.result = true;
 
-                                ctx->addresses("router")->send(
-                                        messaging::make_message(
-                                                ctx->self(),
-                                                "register_manager",
-                                                std::move(task)
-                                        )
-                                );
+                                    pimpl->add_reg_manager(key, task.transport_id_);
 
-                            } else {
-                                ws_response->body = "manager key not found: " + key;
+                                } else {
+                                    response_message.error = api::json_rpc::response_error(
+                                            api::json_rpc::error_code::unknown_error_code,
+                                            "manager not found");
+                                }
+
+                            } catch (exception &e) {
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        e.what());
                             }
-
-                        } catch (exception &e) {
-                            ws_response->body = e.what();
                         }
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
 
                         ctx->addresses("ws")->send(
                                 messaging::make_message(
@@ -268,8 +289,7 @@ namespace stream_cloud {
 
             attach(
                     behavior::make_handler("disconnect", [this](behavior::context &ctx) -> void {
-                        // Удаляем / Меняем статус в базе данных
-                        // unregister_manager - router
+                        // Отключаемся от платформы
 
                         auto &task = ctx.message().body<api::task>();
 
@@ -281,39 +301,38 @@ namespace stream_cloud {
                         api::json_rpc::response_message response_message;
                         response_message.id = task.request.id;
 
-                        try {
-                            // Проверяем на наличие
-                            int count_managers_key = 0;
-                            pimpl->db_ << "select count(*) from managers where key = ? and profile_login = ?"
-                                       << key
-                                       << profile_login
-                                       >> count_managers_key;
-
-                            if (count_managers_key > 0) {
-                                pimpl->db_ << "update managers set status = 0 where key = ? and profile_login = ?;"
+                        if (pimpl->is_reg_manager_id(task.transport_id_)) {
+                            try {
+                                // Проверяем на наличие
+                                int count_managers_key = 0;
+                                pimpl->db_ << "select count(*) from managers where key = ? and profile_login = ?"
                                            << key
-                                           << profile_login;
+                                           << profile_login
+                                           >> count_managers_key;
 
-                                response_message.result = true;
+                                if (count_managers_key > 0) {
+                                    pimpl->db_ << "update managers set status = 0 where key = ? and profile_login = ?;"
+                                               << key
+                                               << profile_login;
 
-                                task.storage.emplace("manager.key", key);
+                                    response_message.result = true;
 
-                                ctx->addresses("router")->send(
-                                        messaging::make_message(
-                                                ctx->self(),
-                                                "unregister_manager",
-                                                std::move(task)
-                                        )
-                                );
-                            } else {
+                                    pimpl->remove_reg_manager(key);
+
+                                } else {
+                                    response_message.error = api::json_rpc::response_error(
+                                            api::json_rpc::error_code::unknown_error_code,
+                                            "manager key not found: " + key);
+                                }
+                            } catch (exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
-                                        "manager key not found: " + key);
+                                        e.what());
                             }
-                        } catch (exception &e) {
+                        } else {
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
-                                    e.what());
+                                    "transport id not equals! wft?");
                         }
 
                         ws_response->body = api::json_rpc::serialize(response_message);
@@ -328,6 +347,81 @@ namespace stream_cloud {
 
                     })
             );
+
+            attach(
+                    behavior::make_handler("request", [this](behavior::context &ctx) -> void {
+
+                        auto &task_ = ctx.message().body<api::task>();
+
+                        auto manager_key = task_.request.metadata["manager-key"].get<std::string>();
+
+                        if (pimpl->is_reg_manager(manager_key)) {
+
+                            auto manager_transport_id = pimpl->get_manager_transport_id(manager_key);
+
+                            api::json::json_map metadata;
+                            metadata["transport"] = {task_.transport_id_};
+
+                            // send request to manager
+                            auto ws_response = new api::web_socket(manager_transport_id);
+
+                            api::json_rpc::notify_message notify_manager_message;
+                            notify_manager_message.method = task_.request.method;
+                            notify_manager_message.params = task_.request.params;
+                            notify_manager_message.metadata = metadata;
+
+                            ws_response->body = api::json_rpc::serialize(notify_manager_message);
+
+                            ctx->addresses("ws")->send(
+                                    messaging::make_message(
+                                            ctx->self(),
+                                            "write",
+                                            api::transport(ws_response)
+                                    )
+                            );
+
+                        } else {
+                            // Менеджер не найден или не подключен
+                        }
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("response", [this](behavior::context &ctx) -> void {
+
+                        auto &ws = ctx.message().body<api::web_socket>();
+
+                        // Отправляем ответ от проверенного менеджера клиенту
+                        if (pimpl->is_reg_manager_id(ws.id())) {
+
+                            api::json_rpc::response_message response_message;
+                            api::json_rpc::parse(ws.body, response_message);
+
+                            // FIXME Проверка на вид ответа(response, notify) - разные ответы, колличество участников
+
+                            auto transports_id = response_message.metadata["transport"].as<api::json::json_array>();
+
+                            // Формируем ответ
+                            std::string response = api::json_rpc::serialize(response_message);
+
+                            for (auto const &id : transports_id) {
+
+                                const auto &transport_id = id.as<api::transport_id>();
+
+                                auto ws_response = new api::web_socket(transport_id);
+                                ws_response->body = response;
+
+                                ctx->addresses("ws")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "write",
+                                                api::transport(ws_response)
+                                        )
+                                );
+                            }
+                        }
+                    })
+            );
         }
 
         void managers::startup(config::config_context_t *) {
@@ -339,10 +433,9 @@ namespace stream_cloud {
 
             db <<
                "create table if not exists managers ("
-               "   _id integer primary key autoincrement not null,"
                "   profile_login text not null,"
                "   name text not null,"
-               "   key text unique not null,"
+               "   key text primary key not null,"
                "   status integer not null default 0"
                ");";
 

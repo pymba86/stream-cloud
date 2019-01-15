@@ -13,10 +13,17 @@ namespace stream_cloud {
 
         void generate_config(config::configuration &config) {
             std::cout << "Load default config" << std::endl;
-            config.dynamic_configuration["http-port"] = "8080";
-            config.dynamic_configuration["ws-port"] = "8081";
-            config.dynamic_configuration["client"]["ip"] = "127.0.0.1";
-            config.dynamic_configuration["client"]["port"] = "8081";
+            config.dynamic_configuration = api::json::json_map{
+                    {"http-port", "8080"},
+                    {"ws-port",   "8081"},
+                    {"profile-key",   ""},
+                    {"client",    {
+                                          {"ip", "127.0.0.1"},
+                                          {"port", "8081"}
+                                  }
+                    }
+
+            };
         }
 
         void load_or_generate_config(config::configuration &config) {

@@ -41,19 +41,20 @@ namespace stream_cloud {
                 }
 
                 if (ec) {
-                    fail(ec, "read");
+                    return;
                 }
 
                 auto *ws = new api::web_socket(id_);
                 ws->body = boost::beast::buffers_to_string(buffer_.data());
-                api::transport ws_data(ws);
                 pipe_->send(
                         messaging::make_message(
                                 pipe_,
                                 dispatcher,
-                                std::move(ws_data)
+                                api::transport(ws)
                         )
                 );
+
+                buffer_.consume(buffer_.size());
 
                 // If we aren't at the queue limit, try to pipeline another request
                 if (!queue_.is_full()) {
@@ -144,13 +145,12 @@ namespace stream_cloud {
                         )
                 );
 
+                buffer_.consume(buffer_.size());
+
                 // If we aren't at the queue limit, try to pipeline another request
                 if (!queue_.is_full()) {
                     do_read();
                 }
-
-
-
             }
 
 

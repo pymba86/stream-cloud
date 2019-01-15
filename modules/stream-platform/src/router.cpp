@@ -17,6 +17,7 @@
 #include <task.hpp>
 #include <json-rpc.hpp>
 #include <context.hpp>
+#include <boost/utility/string_view.hpp>
 
 namespace stream_cloud {
     namespace platform {
@@ -26,45 +27,15 @@ namespace stream_cloud {
         public:
             impl() = default;
 
-            bool is_reg_manager(const std::string &manager_key) const {
-                return managers_reg.find(manager_key) != managers_reg.end();
-            }
-
-            bool is_reg_manager_id(const api::transport_id id) const {
-
-                auto it = std::find_if(std::begin(managers_reg), std::end(managers_reg), [&](auto &&p) {
-                    return p.second == id;
-                });
-
-                return it != std::end(managers_reg);
-            }
-
-            void add_reg_manager(const std::string &manager_key, api::transport_id transport_id) {
-                managers_reg.emplace(manager_key, transport_id);
-            }
-
-            void remove_reg_manager(const std::string &manager_key) {
-                managers_reg.erase(manager_key);
-            }
-
-            api::transport_id get_manager_transport_id(const std::string &key) const {
-                return managers_reg.at(key);
-            }
-
             std::vector<std::string> get_service_list() const {
                 return {"profile", "managers", "settings"};
             }
 
             std::vector<std::string> get_quest_method_list() const {
-                return {"signup", "login"};
+                return {"profile.signup", "profile.login"};
             }
 
             ~impl() = default;
-
-        private:
-            // Список подключенных менеджеров
-            // Необходим для меньших запросов к базе данных (кэш)
-            std::unordered_map<std::string, api::transport_id> managers_reg;
 
         };
 
@@ -88,145 +59,95 @@ namespace stream_cloud {
 
                                     if (api::json_rpc::is_request(message)) {
 
-                                        // parse request
                                         api::task task_;
                                         task_.transport_id_ = ws->id();
-                                        api::json_rpc::parse(ws->body, task_.request);
+                                        api::json_rpc::parse(message, task_.request);
 
-                                        // get name service and method call
-                                        std::vector<std::string> dispatcher;
-                                        boost::algorithm::split(dispatcher, task_.request.method,
-                                                                boost::is_any_of("."));
+                                        if (api::json_rpc::contains(task_.request.metadata, "manager-key")) {
 
-                                        // check name service, method
-                                        if (dispatcher.size() > 1) {
+                                            // Отправляем сообщение менеджеру
+                                            ctx->addresses("managers")->send(
+                                                    messaging::make_message(
+                                                            ctx->self(),
+                                                            "request",
+                                                            std::move(task_)
+                                                    )
+                                            );
+                                        } else {
 
-                                            task_.storage.emplace("service.name", dispatcher[0]);
-                                            task_.storage.emplace("service.method", dispatcher[1]);
+                                            std::vector<std::string> dispatcher;
+                                            boost::algorithm::split(dispatcher, task_.request.method,
+                                                                    boost::is_any_of("."));
 
-                                            if (api::json_rpc::contains(task_.request.metadata, "manager-key")) {
+                                            if (dispatcher.size() > 1) {
 
-                                                auto manager_key = task_.request.metadata["manager-key"].get<std::string>();
+                                                const auto service_name = dispatcher.at(0);
+                                                const auto method_name = dispatcher.at(1);
 
-                                                // Work in manager
+                                                task_.storage.emplace("service.name", service_name);
+                                                task_.storage.emplace("service.method", method_name);
 
-                                                if (pimpl->is_reg_manager(manager_key)) {
+                                                if (api::json_rpc::contains(task_.request.metadata,
+                                                                            "profile-key")) {
 
-                                                    auto manager_transport_id = pimpl->get_manager_transport_id(
-                                                            manager_key);
-
-                                                    api::json::json_map metadata;
-                                                    metadata["transport"] = {ws->id()};
-
-                                                    // send request to manager
-                                                    auto ws_response = new api::web_socket(manager_transport_id);
-
-                                                    api::json_rpc::notify_message notify_manager_message;
-                                                    notify_manager_message.method = task_.request.method;
-                                                    notify_manager_message.params = task_.request.params;
-                                                    notify_manager_message.metadata = metadata;
-
-                                                    ws_response->body = api::json_rpc::serialize(notify_manager_message);
-
-                                                    ctx->addresses("ws")->send(
+                                                    // Проходим проверку
+                                                    ctx->addresses("profile")->send(
                                                             messaging::make_message(
                                                                     ctx->self(),
-                                                                    "write",
-                                                                    api::transport(ws_response)
+                                                                    "auth",
+                                                                    std::move(task_)
                                                             )
                                                     );
 
                                                 } else {
-                                                    // Менеджер не найден или не подключен
-                                                }
-                                            } else {
 
-                                                // Work in platform
+                                                    if (boost::algorithm::any_of_equal(
+                                                            pimpl->get_quest_method_list(),
+                                                            task_.request.method)) {
 
-                                                auto service_name = dispatcher.at(0);
-
-                                                // check white list service name
-                                                if (boost::algorithm::any_of_equal(pimpl->get_service_list(),
-                                                                                   service_name)) {
-
-                                                    if (api::json_rpc::contains(task_.request.metadata,
-                                                                                "profile-key")) {
-
-                                                        ctx->addresses("profile")->send(
+                                                        ctx->addresses(service_name)->send(
                                                                 messaging::make_message(
                                                                         ctx->self(),
-                                                                        "auth",
+                                                                        method_name,
                                                                         std::move(task_)
                                                                 )
                                                         );
-
                                                     } else {
-                                                        // Переход на регистрацию
-                                                        auto method_name = dispatcher.at(1);
 
-                                                        // check white list service name
-                                                        if (boost::algorithm::any_of_equal(
-                                                                pimpl->get_quest_method_list(),
-                                                                method_name)) {
+                                                        // Доступ запрещен
+                                                        auto ws_response = new api::web_socket(task_.transport_id_);
+                                                        api::json_rpc::response_message response_message;
+                                                        response_message.id = task_.request.id;
 
-                                                            ctx->addresses("profile")->send(
-                                                                    messaging::make_message(
-                                                                            ctx->self(),
-                                                                            method_name,
-                                                                            std::move(task_)
-                                                                    )
-                                                            );
-                                                        } else {
-                                                            auto ws_response = new api::web_socket(task_.transport_id_);
-                                                            ws_response->body = "Метод не найден";
-                                                            ctx->addresses("ws")->send(
-                                                                    messaging::make_message(
-                                                                            ctx->self(),
-                                                                            "write",
-                                                                            api::transport(ws_response)
-                                                                    )
-                                                            );
-                                                        }
+                                                        response_message.error = api::json_rpc::response_error(
+                                                                api::json_rpc::error_code::unknown_error_code,
+                                                                "access is denied");
+
+                                                        ws_response->body = api::json_rpc::serialize(response_message);
+
+                                                        ctx->addresses("ws")->send(
+                                                                messaging::make_message(
+                                                                        ctx->self(),
+                                                                        "write",
+                                                                        api::transport(ws_response)
+                                                                )
+                                                        );
+
                                                     }
-
-                                                } else {
-                                                    auto ws_response = new api::web_socket(task_.transport_id_);
-                                                    ws_response->body = "Сервис не найден";
-                                                    ctx->addresses("ws")->send(
-                                                            messaging::make_message(
-                                                                    ctx->self(),
-                                                                    "write",
-                                                                    api::transport(ws_response)
-                                                            )
-                                                    );
                                                 }
-                                            }
-                                        } else {
-                                            // Не правильно указан метод
-                                        }
 
-                                    } else if (api::json_rpc::is_response(message)) {
+                                            } else {
 
-                                        // Отправляем ответ от проверенного менеджера клиенту
-                                        if (pimpl->is_reg_manager_id(ws->id())) {
+                                                // Не правильно указан метод
+                                                auto ws_response = new api::web_socket(task_.transport_id_);
+                                                api::json_rpc::response_message response_message;
+                                                response_message.id = task_.request.id;
 
-                                            api::json_rpc::response_message response_message;
-                                            api::json_rpc::parse(ws->body, response_message);
+                                                response_message.error = api::json_rpc::response_error(
+                                                        api::json_rpc::error_code::unknown_error_code,
+                                                        "not specified correctly method");
 
-                                            auto transports_id = response_message.metadata["transport"].as<api::json::json_array>();
-
-                                            // Убираем метаданные из ответа
-                                            response_message.metadata.clear();
-
-                                            // Формируем ответ
-                                            std::string response = api::json_rpc::serialize(response_message);
-
-                                            for (auto const &id : transports_id) {
-
-                                                const auto &transport_id = id.as<std::string>();
-
-                                                auto ws_response = new api::web_socket(transport_id);
-                                                ws_response->body = response;
+                                                ws_response->body = api::json_rpc::serialize(response_message);
 
                                                 ctx->addresses("ws")->send(
                                                         messaging::make_message(
@@ -237,6 +158,16 @@ namespace stream_cloud {
                                                 );
                                             }
                                         }
+                                    } else if (api::json_rpc::is_response(message)) {
+
+                                        // Отправляем сообщение от менеджера
+                                        ctx->addresses("managers")->send(
+                                                messaging::make_message(
+                                                        ctx->self(),
+                                                        "response",
+                                                        api::transport(ws)
+                                                )
+                                        );
                                     }
                                 } else if (transport_type == api::transport_type::http) {
                                     // Проверяем на trusted_url
@@ -258,26 +189,53 @@ namespace stream_cloud {
                         auto service_name = task.storage["service.name"];
                         auto method_name = task.storage["service.method"];
 
-                        auto service = ctx->addresses(service_name);
 
-                        if (service->message_types().count(method_name) && service_name != "profile") {
-                            service->send(
-                                    messaging::make_message(
-                                            ctx->self(),
-                                            method_name,
-                                            std::move(task)
-                                    ));
+                        if (boost::algorithm::any_of_equal(pimpl->get_service_list(),
+                                                           service_name)) {
+
+                            auto service = ctx->addresses(service_name);
+
+                            if (service->message_types().count(method_name)) {
+
+                                // Вызываем метод из сервиса
+                                service->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                method_name,
+                                                std::move(task)
+                                        ));
+
+                            } else {
+
+                                auto ws_response = new api::web_socket(task.transport_id_);
+                                api::json_rpc::response_message response_message;
+                                response_message.id = task.request.id;
+
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        "method not found");
+
+                                ws_response->body = api::json_rpc::serialize(response_message);
+
+                                ctx->addresses("ws")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "write",
+                                                api::transport(ws_response)
+                                        )
+                                );
+                            }
                         } else {
-                            // send request to manager
-                            auto ws_response = new api::web_socket(task.transport_id_);
 
+                            auto ws_response = new api::web_socket(task.transport_id_);
                             api::json_rpc::response_message response_message;
                             response_message.id = task.request.id;
-                            response_message.error = api::json_rpc::response_error(
-                                    api::json_rpc::error_code::methodNot_found,
-                                    "method not found:" + method_name);
 
-                            ws_response->body =api::json_rpc::serialize(response_message);
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "service not found");
+
+                            ws_response->body = api::json_rpc::serialize(response_message);
 
                             ctx->addresses("ws")->send(
                                     messaging::make_message(
@@ -287,26 +245,8 @@ namespace stream_cloud {
                                     )
                             );
                         }
-                    })
-            );
 
-            attach(
-                    behavior::make_handler("register_manager", [this](behavior::context &ctx) -> void {
-                        // Добавляем менеджер когда он подключается.
 
-                        auto &task = ctx.message().body<api::task>();
-                        auto manager_key = task.storage["manager.key"];
-                        pimpl->add_reg_manager(manager_key, task.transport_id_);
-                    })
-            );
-
-            attach(
-                    behavior::make_handler("unregister_manager", [this](behavior::context &ctx) -> void {
-                        // Удаляем менеджер когда он отключается
-
-                        auto &task = ctx.message().body<api::task>();
-                        auto manager_key = task.storage["manager.key"];
-                        pimpl->remove_reg_manager(manager_key);
                     })
             );
 

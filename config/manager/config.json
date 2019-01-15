@@ -1,0 +1,9 @@
+{
+  "http-port": "8090",
+  "ws-port": "8091",
+  "profile-key": "pymba86.123",
+  "client": {
+    "ip": "127.0.0.1",
+    "port": "8081"
+  }
+}

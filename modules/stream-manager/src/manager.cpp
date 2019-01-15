@@ -1,6 +1,8 @@
 
 #include <dynamic_environment.hpp>
-#include <router.hpp>
+#include "router.hpp"
+#include "users.hpp"
+#include "groups.hpp"
 #include <http/http_server.hpp>
 #include <ws/ws_server.hpp>
 #include <ws/ws_client.hpp>
@@ -34,90 +36,34 @@ void signal_sigsegv(int signum){
     std::abort();
 }
 
-class storage_t final : public config::abstract_service {
-public:
-    explicit storage_t(config::config_context_t *ctx):  abstract_service(ctx,"storage"){
-        attach(
-                behavior::make_handler(
-                        "dispatcher",
-                        [this]( behavior::context& ctx ) -> void {
-
-                            auto transport = ctx.message().body<api::transport>();
-                            auto transport_type = transport->type();
-                            std::string response = str(
-                                    boost::format(R"({ "type": "manager", "data": "%1%"})") % transport->id());
-
-
-                            if (transport_type == api::transport_type::http) {
-                                auto http_response = new api::http(transport->id());
-                                auto *http = static_cast<api::http *>(transport.get());
-                                if (http->uri() == "/system") {
-
-                                    http_response->header("Content-Type", "application/json");
-                                    http_response->body(response);
-
-                                    ctx->addresses("http")->send(
-                                            messaging::make_message(
-                                                    ctx->self(),
-                                                    "write",
-                                                    api::transport(http_response)
-                                            )
-                                    );
-
-                                    api::transport_id id = 0;
-                                    auto ws_response = new api::web_socket(id);
-                                    ws_response->body = response;
-
-                                    ctx->addresses("client")->send(
-                                            messaging::make_message(
-                                                    ctx->self(),
-                                                    "write",
-                                                    api::transport(ws_response)
-                                            )
-                                    );
-                                } else {
-
-                                    ctx->addresses("http")->send(
-                                            messaging::make_message(
-                                                    ctx->self(),
-                                                    "close",
-                                                    api::transport(http_response)
-                                            )
-                                    );
-                                }
-                            } else {
-                                auto *ws = static_cast<api::web_socket *>(transport.get());
-                                std::cout << ws->body << std::endl;
-                            }
-                        }
-                )
-        );
-
-
-    }
-    void startup(config::config_context_t *) {
-    }
-
-    void shutdown() {
-    }
-    ~storage_t() override = default;
-
-
-private:
-
-};
-
-
 
 
 void init_service(config::dynamic_environment&env) {
 
-    auto& storage = env.add_service<storage_t>();
-    auto& ws = env.add_data_provider<client::ws_client::ws_client>(storage->entry_point());
-    auto& http = env.add_data_provider<providers::http_server::http_server>(storage->entry_point());
+    auto &router = env.add_service<manager::router>();
+    auto& client = env.add_data_provider<client::ws_client::ws_client>(router->entry_point());
+    auto &ws = env.add_data_provider<providers::ws_server::ws_server>(router->entry_point());
+    auto& http = env.add_data_provider<providers::http_server::http_server>(router->entry_point());
+    auto &users = env.add_service<manager::users>();
+    auto &groups = env.add_service<manager::groups>();
 
-    storage->add_shared(http.address().operator->());
-    storage->add_shared(ws.address().operator->());
+    // Пользователи
+    users->add_shared(ws.address().operator->());
+    users->add_shared(client.address().operator->());
+    users->join(router);
+    users->join(groups);
+
+    // Группы
+    groups->add_shared(ws.address().operator->());
+    groups->add_shared(client.address().operator->());
+    groups->join(router);
+    groups->join(users);
+
+    // Роутер
+    router->add_shared(http.address().operator->());
+    router->add_shared(ws.address().operator->());
+    router->add_shared(client.address().operator->());
+    router->join(users);
 
 }
 

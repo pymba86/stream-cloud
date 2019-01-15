@@ -39,7 +39,12 @@ namespace stream_cloud {
             ws_client::ws_client(config::config_context_t *ctx, actor::actor_address address)
                     : data_provider(ctx, "client"), pimpl(new impl) {
 
-                pimpl->session_ = std::make_shared<ws_session>(ctx->main_loop(), 0, address);
+
+                pimpl->session_ = std::make_shared<ws_session>(
+                        ctx->main_loop(),
+                        std::to_string(std::chrono::duration_cast<std::chrono::microseconds>
+                                               (clock::now().time_since_epoch()).count()),
+                        address);
 
                 attach(
                         behavior::make_handler(
