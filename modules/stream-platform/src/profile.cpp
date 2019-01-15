@@ -50,6 +50,8 @@ namespace stream_cloud {
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
 
                         if (!login.empty() || !password.empty()) {
 
@@ -58,14 +60,20 @@ namespace stream_cloud {
                                            << login
                                            << password;
 
-                                ws_response->body = "insert done";
+                                response_message.result = true;
 
                             } catch (exception &e) {
-                                ws_response->body = e.what();
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        e.what());
                             }
                         } else {
-                            ws_response->body = "login or password empty";
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "login or password empty");
                         }
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
 
                         ctx->addresses("ws")->send(
                                 messaging::make_message(

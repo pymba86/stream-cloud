@@ -37,6 +37,8 @@ namespace stream_cloud {
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
 
                         if (!name.empty() && name.size() <= 6) {
 
@@ -50,7 +52,9 @@ namespace stream_cloud {
 
                                 std::string url = profile_login + "/" + key;
 
-                                ws_response->body = "insert done key: " + key;
+                                response_message.result = api::json::json_value{
+                                        {"key", key}
+                                };
 
                                 ctx->addresses("http")->send(
                                         messaging::make_message(
@@ -60,11 +64,17 @@ namespace stream_cloud {
                                         )
                                 );
                             } catch (exception &e) {
-                                ws_response->body = e.what();
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        e.what());
                             }
                         } else {
-                            ws_response->body = "name manager empty or size > 6";
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "name manager empty or size > 6");
                         }
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
 
                         ctx->addresses("ws")->send(
                                 messaging::make_message(
@@ -91,6 +101,8 @@ namespace stream_cloud {
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
 
                         if (!key.empty()) {
 
@@ -101,7 +113,7 @@ namespace stream_cloud {
 
                                 std::string url = profile_login + "/" + key;
 
-                                ws_response->body = "delete manager: " + url;
+                                response_message.result = true;
 
                                 ctx->addresses("http")->send(
                                         messaging::make_message(
@@ -110,6 +122,8 @@ namespace stream_cloud {
                                                 std::move(url)
                                         )
                                 );
+
+                                task.storage.emplace("manager.key", key);
 
                                 ctx->addresses("router")->send(
                                         messaging::make_message(
@@ -120,11 +134,17 @@ namespace stream_cloud {
                                 );
 
                             } catch (exception &e) {
-                                ws_response->body = e.what();
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        e.what());
                             }
                         } else {
-                            ws_response->body = "name manager empty";
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "name manager empty");
                         }
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
 
                         ctx->addresses("ws")->send(
                                 messaging::make_message(
@@ -149,13 +169,10 @@ namespace stream_cloud {
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
-
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
 
                         try {
-
-                            api::json_rpc::response_message response_message;
-                            response_message.id = task.request.id;
-
                             api::json::json_array managers_list;
 
                             pimpl->db_ << "select name, key, status from managers where profile_login = ?;"
@@ -172,11 +189,14 @@ namespace stream_cloud {
                                        };
 
                             response_message.result = managers_list;
-                            ws_response->body = api::json_rpc::serialize(response_message);
 
                         } catch (exception &e) {
-                            ws_response->body = e.what();
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    e.what());
                         }
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
 
                         ctx->addresses("ws")->send(
                                 messaging::make_message(
@@ -216,6 +236,8 @@ namespace stream_cloud {
                                            << key
                                            << profile_login;
 
+                                ws_response->body = "connect manager: " + profile_login + "/" + key;
+
                                 task.storage.emplace("manager.key", key);
 
                                 ctx->addresses("router")->send(
@@ -226,7 +248,6 @@ namespace stream_cloud {
                                         )
                                 );
 
-                                ws_response->body = "connect manager: " + profile_login + "/" + key;
                             } else {
                                 ws_response->body = "manager key not found: " + key;
                             }
@@ -257,6 +278,8 @@ namespace stream_cloud {
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
 
                         try {
                             // Проверяем на наличие
@@ -271,9 +294,9 @@ namespace stream_cloud {
                                            << key
                                            << profile_login;
 
-                                task.storage.emplace("manager.key", key);
+                                response_message.result = true;
 
-                                ws_response->body = "disconnect manager: " + profile_login + "/" + key;
+                                task.storage.emplace("manager.key", key);
 
                                 ctx->addresses("router")->send(
                                         messaging::make_message(
@@ -283,12 +306,17 @@ namespace stream_cloud {
                                         )
                                 );
                             } else {
-                                ws_response->body = "manager key not found: " + key;
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        "manager key not found: " + key);
                             }
-
                         } catch (exception &e) {
-                            ws_response->body = e.what();
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    e.what());
                         }
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
 
                         ctx->addresses("ws")->send(
                                 messaging::make_message(
