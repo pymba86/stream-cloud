@@ -53,6 +53,8 @@ void init_service(config::dynamic_environment&env) {
     auto &devices = env.add_service<manager::devices>();
     auto &platform = env.add_service<manager::platform>();
 
+    // TODO Передалать на   environment::cooperation::link
+
     // Поставшики данных
     auto& client_provider = env.add_data_provider<client::ws_client::ws_client>(platform->entry_point());
     auto &ws_provider = env.add_data_provider<providers::ws_server::ws_server>(router->entry_point());

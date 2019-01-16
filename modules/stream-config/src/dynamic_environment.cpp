@@ -8,27 +8,6 @@
 namespace stream_cloud {
     namespace config {
 
-        void startup(data_provider &provider, config_context_t *context) {
-            std::cerr << "startup service: " << provider.name() << std::endl;
-            ///if (state() == service_state::initialized) {
-            ///    state(service_state::started);
-            /**    return*/ provider.startup(context);
-            ///} else {
-            ///    std::cerr << "error startup  service: " << provider.name() << std::endl;
-            ///}
-        }
-
-        void shutdown(data_provider &provider) {
-            std::cerr << "shutdown service:" << provider.name() << std::endl;
-            ///if (state() == service_state::started) {
-            ///    state(service_state::stopped);
-            /**    return*/ provider.shutdown();
-            ///} else {
-            ///    std::cerr << "error shutdown service:" << provider.name() << std::endl;
-            ///}
-
-        }
-
         struct dynamic_environment::impl final {
             impl() :
                     coordinator_(new executor::coordinator<executor::work_sharing>(4, 1000)),
@@ -58,6 +37,7 @@ namespace stream_cloud {
             std::unique_ptr<executor::abstract_coordinator> coordinator_;
 
             std::unordered_map<std::string, std::unique_ptr<data_provider> > data_provider_;
+            std::unordered_map<std::string, abstract_service *> services_;
 
         private:
 
@@ -69,7 +49,13 @@ namespace stream_cloud {
         void dynamic_environment::shutdown() {
 
             for (auto &i:pimpl->data_provider_) {
-                config::shutdown((*i.second.get()));
+                auto provider = i.second.get();
+                provider->shutdown();
+            }
+
+            for (auto &i:pimpl->services_) {
+                auto service = i.second;
+                service->shutdown();
             }
 
             pimpl->main_loop()->stop();
@@ -78,9 +64,16 @@ namespace stream_cloud {
 
         void dynamic_environment::startup() {
 
+            auto context = this->context();
+
             for (auto &i:pimpl->data_provider_) {
                 auto provider = i.second.get();
-                config::startup(*provider, static_cast<config_context_t *>(this));
+                provider->startup(context);
+            }
+
+            for (auto &i:pimpl->services_) {
+                auto service = i.second;
+                service->startup(context);
             }
 
             start();
@@ -99,6 +92,7 @@ namespace stream_cloud {
 
             std::shared_ptr<boost::asio::signal_set> sigint_set(
                     new boost::asio::signal_set(main_loop(), SIGINT, SIGTERM));
+
             sigint_set->async_wait(
                     [sigint_set, this](const boost::system::error_code &/*err*/, int /*num*/) {
                         shutdown();
@@ -141,12 +135,13 @@ namespace stream_cloud {
             return pimpl->config();
         }
 
-       environment::cooperation &dynamic_environment::manager_group() {
+        environment::cooperation &dynamic_environment::manager_group() {
             return pimpl->cooperation_;
         }
 
         auto dynamic_environment::add_service(abstract_service *service_ptr) -> service & {
-            service_ptr->startup(context());
+            auto name_ = service_ptr->name();
+            pimpl->services_.emplace(name_, service_ptr);
             return manager_group().created_group(service_ptr);
         }
 

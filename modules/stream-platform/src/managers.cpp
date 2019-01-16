@@ -320,7 +320,7 @@ namespace stream_cloud {
                             try {
                                 response_message.result = true;
                                 pimpl->remove_reg_manager(key);
-
+                                return;
                             } catch (exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
@@ -348,6 +348,7 @@ namespace stream_cloud {
             attach(
                     behavior::make_handler("request", [this](behavior::context &ctx) -> void {
 
+                        // FIXME Что тут вообще твориться?
                         auto &task_ = ctx.message().body<api::task>();
 
                         auto manager_key = task_.request.metadata["manager-key"].get<std::string>();

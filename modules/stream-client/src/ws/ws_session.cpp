@@ -167,6 +167,10 @@ namespace stream_cloud {
                 queue_(ptr->body);
             }
 
+            void ws_session::write(const std::string &value) {
+                queue_(value);
+            };
+
             bool ws_session::queue::on_write() {
                 BOOST_ASSERT(!items_.empty());
                 auto const was_full = is_full();

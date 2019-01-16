@@ -34,6 +34,7 @@ namespace stream_cloud {
                 impl(const impl &) = default;
 
                 std::shared_ptr<ws_session> session_;
+                std::string closing_message;
             };
 
             ws_client::ws_client(config::config_context_t *ctx, actor::actor_address address)
@@ -67,6 +68,16 @@ namespace stream_cloud {
                         )
                 );
 
+                attach(
+                        behavior::make_handler(
+                                "set_closing_message",
+                                [this](behavior::context& ctx) -> void {
+                                    auto text = ctx.message().body<std::string>();
+                                    pimpl->closing_message = text;
+                                }
+                        )
+                );
+
 
             }
 
@@ -79,6 +90,13 @@ namespace stream_cloud {
             }
 
             void ws_client::shutdown() {
+
+                auto text  = pimpl->closing_message;
+                if (text.empty()) {
+                    pimpl->session_->close();
+                } else {
+                    pimpl->session_->write(text);
+                }
 
             }
 

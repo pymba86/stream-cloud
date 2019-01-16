@@ -51,15 +51,17 @@ namespace stream_cloud {
                         if (transport_type == api::transport_type::ws) {
                             api::json::json_map message{api::json::data{ws->body}};
 
-                            std::cout << "platform: " << message << std::endl;
-
                             if (api::json_rpc::is_request(message)) {
+
+                                // Если есть manager-key - отпраявляем router:dispatcher
 
                                 api::task task_;
                                 task_.transport_id_ = ws->id();
                                 api::json_rpc::parse(message, task_.request);
+
                                 // Отключаемся от платформы
                                 if (task_.request.method == "disconnect") {
+
                                     ctx->addresses("client")->send(
                                             messaging::make_message(
                                                     ctx->self(),
@@ -71,13 +73,39 @@ namespace stream_cloud {
                                     std::cout << "manager disconnect from platform" << std::endl;
                                 }
 
-                            } else {
+                            } else if (api::json_rpc::contains(message, "error")) {
+                                std::cout << "error platform: " << message << std::endl;
 
+                                ctx->addresses("client")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "close",
+                                                std::move(std::string())
+                                        )
+                                );
+
+                                std::cout << "manager disconnect from platform" << std::endl;
+
+                            } else {
+                                std::cout << "platform: " << message << std::endl;
+
+
+                                // FIXME При каждом ответе устанавливается значение. Убрать
+                                api::json_rpc::request_message request_message;
+                                request_message.id = "0";
+                                request_message.method = "managers.disconnect";
+                                request_message.params = api::json::json_map{{"key", pimpl->manager_key}};
+                                request_message.metadata = api::json::json_map{{"profile-key", pimpl->profile_key}};
+
+                                ctx->addresses("client")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "set_closing_message",
+                                                std::move(api::json_rpc::serialize(request_message))
+                                        )
+                                );
                             }
 
-                            // Провека команды на disconnect
-                            // -> отправка команды client:close
-                            // -> Вывод сообщения об отключении
                         }
 
                     })
