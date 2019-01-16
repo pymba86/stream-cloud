@@ -147,6 +147,25 @@ namespace stream_cloud {
                                         )
                                 );
 
+                                if (pimpl->is_reg_manager(key)) {
+
+                                    // Отправляем менеджеру сообщение об отключении
+                                    auto ws_client_message = new api::web_socket(pimpl->get_manager_transport_id(key));
+                                    api::json_rpc::request_message client_message;
+                                    client_message.id = task.request.id;
+                                    client_message.method = "disconnect";
+
+                                    ws_client_message->body = api::json_rpc::serialize(client_message);
+
+                                    ctx->addresses("ws")->send(
+                                            messaging::make_message(
+                                                    ctx->self(),
+                                                    "write",
+                                                    api::transport(ws_client_message)
+                                            )
+                                    );
+                                }
+
                                 pimpl->remove_reg_manager(key);
 
                             } catch (exception &e) {
@@ -157,7 +176,7 @@ namespace stream_cloud {
                         } else {
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
-                                    "name manager empty");
+                                    "key manager empty");
                         }
 
                         ws_response->body = api::json_rpc::serialize(response_message);
@@ -190,7 +209,7 @@ namespace stream_cloud {
                         try {
                             api::json::json_array managers_list;
 
-                            pimpl->db_ << "select name, key, status from managers where profile_login = ?;"
+                            pimpl->db_ << "select name, key from managers where profile_login = ?;"
                                        << profile_login
                                        >> [&](std::string name, std::string key, std::string status) {
 
@@ -198,7 +217,6 @@ namespace stream_cloud {
 
                                            manager["name"] = name;
                                            manager["key"] = key;
-                                           manager["status"] = status;
 
                                            managers_list.push_back(manager);
                                        };
@@ -254,9 +272,6 @@ namespace stream_cloud {
                                            >> count_managers_key;
 
                                 if (count_managers_key > 0) {
-                                    pimpl->db_ << "update managers set status = 1 where key = ? and profile_login = ?;"
-                                               << key
-                                               << profile_login;
 
                                     response_message.result = true;
 
@@ -303,27 +318,9 @@ namespace stream_cloud {
 
                         if (pimpl->is_reg_manager_id(task.transport_id_)) {
                             try {
-                                // Проверяем на наличие
-                                int count_managers_key = 0;
-                                pimpl->db_ << "select count(*) from managers where key = ? and profile_login = ?"
-                                           << key
-                                           << profile_login
-                                           >> count_managers_key;
+                                response_message.result = true;
+                                pimpl->remove_reg_manager(key);
 
-                                if (count_managers_key > 0) {
-                                    pimpl->db_ << "update managers set status = 0 where key = ? and profile_login = ?;"
-                                               << key
-                                               << profile_login;
-
-                                    response_message.result = true;
-
-                                    pimpl->remove_reg_manager(key);
-
-                                } else {
-                                    response_message.error = api::json_rpc::response_error(
-                                            api::json_rpc::error_code::unknown_error_code,
-                                            "manager key not found: " + key);
-                                }
                             } catch (exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
@@ -435,8 +432,7 @@ namespace stream_cloud {
                "create table if not exists managers ("
                "   profile_login text not null,"
                "   name text not null,"
-               "   key text primary key not null,"
-               "   status integer not null default 0"
+               "   key text primary key not null"
                ");";
 
             pimpl = std::make_unique<impl>(db);

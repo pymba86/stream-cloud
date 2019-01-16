@@ -26,10 +26,11 @@ namespace stream_cloud {
         class router::impl final {
 
         public:
-            impl(std::string profile_key) : profile_key(std::move(profile_key)) {};
+            impl(std::string profile_key, std::string manager_key)
+                    : profile_key(std::move(profile_key)), manager_key(std::move(manager_key)) {};
 
             std::vector<std::string> get_service_list() const {
-                return {"users", "devices", "settings", "groups"};
+                return {"users", "devices", "settings", "groups", "subscriptions", "connections", "devices"};
             }
 
             std::vector<std::string> get_quest_method_list() const {
@@ -43,6 +44,7 @@ namespace stream_cloud {
             ~impl() = default;
 
             const std::string profile_key;
+            const std::string manager_key;
 
         };
 
@@ -156,15 +158,8 @@ namespace stream_cloud {
                                         }
 
                                     } else if (api::json_rpc::is_response(message)) {
-
-                                        // Отправляем сообщение от менеджера
-                                        ctx->addresses("managers")->send(
-                                                messaging::make_message(
-                                                        ctx->self(),
-                                                        "response",
-                                                        api::transport(ws)
-                                                )
-                                        );
+                                        // Ответ от устройства
+                                        std::cout << "device: " << api::json::json_map{api::json::data{ws->body}} << std::endl;
                                     }
                                 } else if (transport_type == api::transport_type::http) {
                                     // Проверяем на trusted_url
@@ -285,7 +280,6 @@ namespace stream_cloud {
                         auto &error = ctx.message().body<std::string>();
                     })
             );
-
         }
 
         router::~router() {
@@ -294,10 +288,10 @@ namespace stream_cloud {
 
         void router::startup(config::config_context_t *ctx) {
 
-            // Получаем ключ профиля
-            auto key = ctx->config()["profile-key"].as<std::string>();
+            auto profile_key = ctx->config()["profile-key"].as<std::string>();
+            auto manager_key = ctx->config()["manager-key"].as<std::string>();
 
-            pimpl = std::make_unique<impl>(key);
+            pimpl = std::make_unique<impl>(profile_key, manager_key);
         }
 
         void router::shutdown() {

@@ -71,7 +71,7 @@ namespace stream_cloud {
                         api::json_rpc::response_message response_message;
                         response_message.id = task.request.id;
 
-                        if (!login.empty() || !password.empty()) {
+                        if (!login.empty() && !password.empty()) {
 
                             try {
                                 pimpl->db_ << "insert into users (login,password) values (?,?);"
@@ -224,7 +224,7 @@ namespace stream_cloud {
                         api::json_rpc::response_message response_message;
                         response_message.id = task.request.id;
 
-                        if (!login_param.empty() || !password_param.empty()) {
+                        if (!login_param.empty() && !password_param.empty()) {
 
                             std::string login, password;
 

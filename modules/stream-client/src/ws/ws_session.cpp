@@ -16,6 +16,7 @@ namespace stream_cloud {
     namespace client {
         namespace ws_client {
             constexpr const char *dispatcher = "dispatcher";
+            constexpr const char *handshake = "handshake";
 
             void ws_session::on_write(boost::system::error_code ec, std::size_t bytes_transferred) {
                 boost::ignore_unused(bytes_transferred);
@@ -72,15 +73,10 @@ namespace stream_cloud {
                                 std::placeholders::_2));
             }
 
-            void ws_session::on_close(boost::system::error_code ec)
+            void ws_session::close()
             {
-                if(ec)
-                    return fail(ec, "close");
-
-                // If we get here then the connection is closed gracefully
-
-                // The buffers() function helps print a ConstBufferSequence
-                std::cout << boost::beast::buffers(buffer_.data()) << std::endl;
+                boost::system::error_code ec;
+                ws_.close(boost::beast::websocket::close_code::normal, ec);
             }
 
             void ws_session::run(const std::string &host, const std::string &port) {
@@ -134,14 +130,13 @@ namespace stream_cloud {
 
                 ws_.text(ws_.got_text());
 
-                auto* ws = new api::web_socket (id_);
+                auto *ws = new api::web_socket(id_);
                 ws->body = boost::beast::buffers_to_string(buffer_.data());
-                api::transport ws_data(ws);
                 pipe_->send(
                         messaging::make_message(
                                 pipe_,
-                                dispatcher,
-                                std::move(ws_data)
+                                handshake,
+                                api::transport(ws)
                         )
                 );
 

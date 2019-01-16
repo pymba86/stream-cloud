@@ -3,6 +3,10 @@
 #include "router.hpp"
 #include "users.hpp"
 #include "groups.hpp"
+#include "platform.hpp"
+#include "subscriptions.hpp"
+#include "devices.hpp"
+#include "connections.hpp"
 #include <http/http_server.hpp>
 #include <ws/ws_server.hpp>
 #include <ws/ws_client.hpp>
@@ -40,30 +44,90 @@ void signal_sigsegv(int signum){
 
 void init_service(config::dynamic_environment&env) {
 
+    // Сервисы
     auto &router = env.add_service<manager::router>();
-    auto& client = env.add_data_provider<client::ws_client::ws_client>(router->entry_point());
-    auto &ws = env.add_data_provider<providers::ws_server::ws_server>(router->entry_point());
-    auto& http = env.add_data_provider<providers::http_server::http_server>(router->entry_point());
     auto &users = env.add_service<manager::users>();
     auto &groups = env.add_service<manager::groups>();
+    auto &subscriptions = env.add_service<manager::subscriptions>();
+    auto &connections = env.add_service<manager::connections>();
+    auto &devices = env.add_service<manager::devices>();
+    auto &platform = env.add_service<manager::platform>();
+
+    // Поставшики данных
+    auto& client_provider = env.add_data_provider<client::ws_client::ws_client>(platform->entry_point());
+    auto &ws_provider = env.add_data_provider<providers::ws_server::ws_server>(router->entry_point());
+    auto& http_provider = env.add_data_provider<providers::http_server::http_server>(router->entry_point());
 
     // Пользователи
-    users->add_shared(ws.address().operator->());
-    users->add_shared(client.address().operator->());
+    users->add_shared(ws_provider.address().operator->());
+    users->add_shared(client_provider.address().operator->());
+
     users->join(router);
     users->join(groups);
+    users->join(subscriptions);
+    users->join(connections);
+    users->join(devices);
 
     // Группы
-    groups->add_shared(ws.address().operator->());
-    groups->add_shared(client.address().operator->());
+    groups->add_shared(ws_provider.address().operator->());
+    groups->add_shared(client_provider.address().operator->());
+
     groups->join(router);
     groups->join(users);
+    groups->join(subscriptions);
+    groups->join(connections);
+    groups->join(devices);
+
+    // Подписки
+    subscriptions->add_shared(ws_provider.address().operator->());
+    subscriptions->add_shared(client_provider.address().operator->());
+
+    subscriptions->join(router);
+    subscriptions->join(users);
+    subscriptions->join(groups);
+    subscriptions->join(connections);
+    subscriptions->join(devices);
+
+    // Подключения
+    connections->add_shared(ws_provider.address().operator->());
+    connections->add_shared(client_provider.address().operator->());
+
+    connections->join(router);
+    connections->join(users);
+    connections->join(groups);
+    connections->join(subscriptions);
+    connections->join(devices);
+
+    // Устройства
+    devices->add_shared(ws_provider.address().operator->());
+    devices->add_shared(client_provider.address().operator->());
+
+    devices->join(router);
+    devices->join(users);
+    devices->join(groups);
+    devices->join(subscriptions);
+    devices->join(connections);
+
+    // Платформа
+    platform->add_shared(ws_provider.address().operator->());
+    platform->add_shared(client_provider.address().operator->());
+
+    platform->join(router);
+    platform->join(users);
+    platform->join(groups);
+    platform->join(subscriptions);
+    platform->join(connections);
 
     // Роутер
-    router->add_shared(http.address().operator->());
-    router->add_shared(ws.address().operator->());
-    router->add_shared(client.address().operator->());
+    router->add_shared(http_provider.address().operator->());
+    router->add_shared(ws_provider.address().operator->());
+    router->add_shared(client_provider.address().operator->());
+
     router->join(users);
+    router->join(groups);
+    router->join(subscriptions);
+    router->join(connections);
+    router->join(devices);
 
 }
 

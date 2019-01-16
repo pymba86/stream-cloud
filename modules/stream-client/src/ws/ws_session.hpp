@@ -128,7 +128,7 @@ namespace stream_cloud {
 
                 void on_handshake(boost::system::error_code ec);
 
-                void on_close(boost::system::error_code ec);
+                void close();
 
                 const api::transport_id id_;
 

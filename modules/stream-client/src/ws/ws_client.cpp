@@ -58,6 +58,15 @@ namespace stream_cloud {
                         )
                 );
 
+                attach(
+                        behavior::make_handler(
+                                "close",
+                                [this](behavior::context& ctx) -> void {
+                                    pimpl->session_->close();
+                                }
+                        )
+                );
+
 
             }
 

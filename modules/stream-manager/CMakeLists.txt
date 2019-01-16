@@ -11,7 +11,16 @@ add_executable(${CURRENT_TARGET}
         src/users.hpp
         src/users.cpp
         src/groups.hpp
-        src/groups.cpp)
+        src/groups.cpp
+        src/subscriptions.hpp
+        src/subscriptions.cpp
+        src/connections.hpp
+        src/connections.cpp
+        src/devices.hpp
+        src/devices.cpp
+        src/platform.hpp
+        src/platform.cpp
+        )
 
 
 target_link_libraries(

@@ -17,6 +17,7 @@ namespace stream_cloud {
                     {"http-port", "8080"},
                     {"ws-port",   "8081"},
                     {"profile-key",   ""},
+                    {"manager-key",   ""},
                     {"client",    {
                                           {"ip", "127.0.0.1"},
                                           {"port", "8081"}

@@ -1,9 +1,9 @@
 
-#include "groups.hpp"
+#include "devices.hpp"
 #include <sqlite_modern_cpp.h>
-#include "task.hpp"
 #include "websocket.hpp"
-#include <unordered_set>
+#include "task.hpp"
+#include "json-rpc.hpp"
 
 namespace stream_cloud {
 
@@ -11,40 +11,45 @@ namespace stream_cloud {
 
         using namespace sqlite;
 
-        class groups::impl final {
+        class devices::impl final {
         public:
             impl(sqlite::database &db) : db_(db) {};
 
             ~impl() = default;
 
             sqlite::database db_;
+
         };
 
-        groups::groups(config::config_context_t *ctx) : abstract_service(ctx, "groups") {
+        devices::devices(config::config_context_t *ctx) : abstract_service(ctx, "devices") {
 
 
             attach(
                     behavior::make_handler("add", [this](behavior::context &ctx) -> void {
-                        // Добавляет новую группу
+                        // Добавляем устройство
 
                         auto &task = ctx.message().body<api::task>();
 
-                        auto key = task.request.params["key"].as<std::string>();
                         auto name = task.request.params["name"].as<std::string>();
+                        auto profile_login = task.storage["user.login"];
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
                         api::json_rpc::response_message response_message;
                         response_message.id = task.request.id;
 
-                        if (!key.empty() && !name.empty()) {
+                        if (!name.empty() && name.size() <= 6) {
+
+                            std::string key = profile_login + "." + name;
 
                             try {
-                                pimpl->db_ << "insert into groups (key,name) values (?,?);"
-                                           << key
-                                           << name;
+                                pimpl->db_ << "insert into devices (name, key) values (?,?);"
+                                           << name
+                                           << key;
 
-                                response_message.result = true;
+                                response_message.result = api::json::json_value{
+                                        {"key", key}
+                                };
 
                             } catch (exception &e) {
                                 response_message.error = api::json_rpc::response_error(
@@ -54,7 +59,7 @@ namespace stream_cloud {
                         } else {
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
-                                    "key or name empty");
+                                    "name device empty or size > 6");
                         }
 
                         ws_response->body = api::json_rpc::serialize(response_message);
@@ -71,7 +76,7 @@ namespace stream_cloud {
 
             attach(
                     behavior::make_handler("delete", [this](behavior::context &ctx) -> void {
-                        // Удаляет группу
+                        // Удаление устройства
 
                         auto &task = ctx.message().body<api::task>();
 
@@ -83,12 +88,12 @@ namespace stream_cloud {
                         response_message.id = task.request.id;
 
                         if (!key.empty()) {
-
                             try {
-                                pimpl->db_ << "delete from groups where key = ?;"
+                                pimpl->db_ << "delete from devices where key = ?;"
                                            << key;
 
                                 response_message.result = true;
+
 
                             } catch (exception &e) {
                                 response_message.error = api::json_rpc::response_error(
@@ -98,7 +103,7 @@ namespace stream_cloud {
                         } else {
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
-                                    "key group empty");
+                                    "key device empty");
                         }
 
                         ws_response->body = api::json_rpc::serialize(response_message);
@@ -111,12 +116,13 @@ namespace stream_cloud {
                                 )
                         );
 
+
                     })
             );
 
             attach(
                     behavior::make_handler("list", [this](behavior::context &ctx) -> void {
-                        // Получить список пользователей
+                        // Получить список устройств
 
                         auto &task = ctx.message().body<api::task>();
 
@@ -126,17 +132,21 @@ namespace stream_cloud {
                         response_message.id = task.request.id;
 
                         try {
-                            api::json::json_array users_list;
+                            api::json::json_array managers_list;
 
-                            pimpl->db_ << "select key,name from groups;"
-                                       >> [&](std::string key, std::string name) {
-                                           users_list.push_back(api::json::json_map{
-                                                   {"key",  key},
-                                                   {"name", name}
-                                           });
+                            pimpl->db_ << "select name, key, status from devices;"
+                                       >> [&](std::string name, std::string key, std::string status) {
+
+                                           api::json::json_map manager;
+
+                                           manager["name"] = name;
+                                           manager["key"] = key;
+                                           manager["status"] = status;
+
+                                           managers_list.push_back(manager);
                                        };
 
-                            response_message.result = users_list;
+                            response_message.result = managers_list;
 
                         } catch (exception &e) {
                             response_message.error = api::json_rpc::response_error(
@@ -153,11 +163,12 @@ namespace stream_cloud {
                                         api::transport(ws_response)
                                 )
                         );
+
                     })
             );
         }
 
-        void groups::startup(config::config_context_t *) {
+        void devices::startup(config::config_context_t *) {
 
             sqlite_config storage_config;
             storage_config.flags = OpenFlags::READWRITE | OpenFlags::CREATE | OpenFlags::FULLMUTEX;
@@ -165,15 +176,16 @@ namespace stream_cloud {
             database db("manager_db", storage_config);
 
             db <<
-               "create table if not exists groups ("
+               "create table if not exists devices ("
                "   key text primary key not null,"
-               "   name text unique not null"
+               "   name text not null,"
+               "   status integer not null default 0"
                ");";
 
             pimpl = std::make_unique<impl>(db);
         }
 
-        void groups::shutdown() {
+        void devices::shutdown() {
 
         }
     }

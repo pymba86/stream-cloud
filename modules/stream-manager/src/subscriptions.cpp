@@ -1,5 +1,5 @@
 
-#include "groups.hpp"
+#include "subscriptions.hpp"
 #include <sqlite_modern_cpp.h>
 #include "task.hpp"
 #include "websocket.hpp"
@@ -11,7 +11,7 @@ namespace stream_cloud {
 
         using namespace sqlite;
 
-        class groups::impl final {
+        class subscriptions::impl final {
         public:
             impl(sqlite::database &db) : db_(db) {};
 
@@ -20,29 +20,29 @@ namespace stream_cloud {
             sqlite::database db_;
         };
 
-        groups::groups(config::config_context_t *ctx) : abstract_service(ctx, "groups") {
+        subscriptions::subscriptions(config::config_context_t *ctx) : abstract_service(ctx, "subscriptions") {
 
 
             attach(
                     behavior::make_handler("add", [this](behavior::context &ctx) -> void {
-                        // Добавляет новую группу
+                        // Добавляет подписку на группу
 
                         auto &task = ctx.message().body<api::task>();
 
-                        auto key = task.request.params["key"].as<std::string>();
-                        auto name = task.request.params["name"].as<std::string>();
+                        auto group_key = task.request.params["group-key"].as<std::string>();
+                        auto user_login = task.request.params["user-login"].as<std::string>();
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
                         api::json_rpc::response_message response_message;
                         response_message.id = task.request.id;
 
-                        if (!key.empty() && !name.empty()) {
+                        if (!group_key.empty() && !user_login.empty()) {
 
                             try {
-                                pimpl->db_ << "insert into groups (key,name) values (?,?);"
-                                           << key
-                                           << name;
+                                pimpl->db_ << "insert into subscriptions (group_key,user_login) values (?,?);"
+                                           << group_key
+                                           << user_login;
 
                                 response_message.result = true;
 
@@ -54,7 +54,7 @@ namespace stream_cloud {
                         } else {
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
-                                    "key or name empty");
+                                    "key or login empty");
                         }
 
                         ws_response->body = api::json_rpc::serialize(response_message);
@@ -71,22 +71,24 @@ namespace stream_cloud {
 
             attach(
                     behavior::make_handler("delete", [this](behavior::context &ctx) -> void {
-                        // Удаляет группу
+                        // Удаляет подписку на группу
 
                         auto &task = ctx.message().body<api::task>();
 
-                        auto key = task.request.params["key"].as<std::string>();
+                        auto group_key = task.request.params["group-key"].as<std::string>();
+                        auto user_login = task.request.params["user-login"].as<std::string>();
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
                         api::json_rpc::response_message response_message;
                         response_message.id = task.request.id;
 
-                        if (!key.empty()) {
+                        if (!group_key.empty() && !user_login.empty()) {
 
                             try {
-                                pimpl->db_ << "delete from groups where key = ?;"
-                                           << key;
+                                pimpl->db_ << "delete from subscriptions where group_key = ? and user_login = ?;"
+                                           << group_key
+                                           << user_login;
 
                                 response_message.result = true;
 
@@ -98,7 +100,7 @@ namespace stream_cloud {
                         } else {
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
-                                    "key group empty");
+                                    "key or login empty");
                         }
 
                         ws_response->body = api::json_rpc::serialize(response_message);
@@ -116,32 +118,39 @@ namespace stream_cloud {
 
             attach(
                     behavior::make_handler("list", [this](behavior::context &ctx) -> void {
-                        // Получить список пользователей
+                        // Получить подписчиков
 
                         auto &task = ctx.message().body<api::task>();
+
+                        auto group_key = task.request.params["group-key"].as<std::string>();
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
                         api::json_rpc::response_message response_message;
                         response_message.id = task.request.id;
 
-                        try {
-                            api::json::json_array users_list;
+                        if (!group_key.empty()) {
 
-                            pimpl->db_ << "select key,name from groups;"
-                                       >> [&](std::string key, std::string name) {
-                                           users_list.push_back(api::json::json_map{
-                                                   {"key",  key},
-                                                   {"name", name}
-                                           });
-                                       };
+                            try {
+                                api::json::json_array users_list;
 
-                            response_message.result = users_list;
+                                pimpl->db_ << "select user_login from subscriptions where group_key = ?;"
+                                           << group_key
+                                           >> [&](std::string user_login) {
+                                               users_list.push_back(user_login);
+                                           };
 
-                        } catch (exception &e) {
+                                response_message.result = users_list;
+
+                            } catch (exception &e) {
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        e.what());
+                            }
+                        } else {
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
-                                    e.what());
+                                    "key empty");
                         }
 
                         ws_response->body = api::json_rpc::serialize(response_message);
@@ -157,7 +166,7 @@ namespace stream_cloud {
             );
         }
 
-        void groups::startup(config::config_context_t *) {
+        void subscriptions::startup(config::config_context_t *) {
 
             sqlite_config storage_config;
             storage_config.flags = OpenFlags::READWRITE | OpenFlags::CREATE | OpenFlags::FULLMUTEX;
@@ -165,15 +174,15 @@ namespace stream_cloud {
             database db("manager_db", storage_config);
 
             db <<
-               "create table if not exists groups ("
-               "   key text primary key not null,"
-               "   name text unique not null"
+               "create table if not exists subscriptions ("
+               "   group_key text not null,"
+               "   user_login text not null"
                ");";
 
             pimpl = std::make_unique<impl>(db);
         }
 
-        void groups::shutdown() {
+        void subscriptions::shutdown() {
 
         }
     }
