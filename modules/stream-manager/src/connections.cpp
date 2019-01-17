@@ -4,6 +4,11 @@
 #include "task.hpp"
 #include "websocket.hpp"
 #include <unordered_set>
+#include <iostream>
+#include <vector>
+#include <numeric>
+#include <string>
+#include <functional>
 
 namespace stream_cloud {
 
@@ -118,7 +123,7 @@ namespace stream_cloud {
 
             attach(
                     behavior::make_handler("list", [this](behavior::context &ctx) -> void {
-                        // Получить подписчиков
+                        // Получить устройства группы
 
                         auto &task = ctx.message().body<api::task>();
 
@@ -151,6 +156,68 @@ namespace stream_cloud {
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
                                     "group-key empty");
+                        }
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
+
+                        ctx->addresses("ws")->send(
+                                messaging::make_message(
+                                        ctx->self(),
+                                        "write",
+                                        api::transport(ws_response)
+                                )
+                        );
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("groups", [this](behavior::context &ctx) -> void {
+                        // Получить список устройств по списку групп
+
+                        auto &task = ctx.message().body<api::task>();
+
+                        auto group_key_list = task.request.params.as<api::json::json_array>();
+
+                        // Отправляем ответ
+                        auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
+
+                        if (!group_key_list.empty()) {
+
+                            try {
+
+                                std::vector<std::string> groups;
+                                api::json::json_array devices_list;
+
+                                for (auto const &group_key : group_key_list) {
+                                    groups.emplace_back(group_key.as<std::string>());
+                                }
+
+                                pimpl->db_ << "select device_key from connections where group_key in (?);"
+                                           << std::accumulate(std::begin(groups), std::end(groups), string(),
+                                                              [](string &ss, string &s)
+                                                              {
+                                                                  return ss.empty() ? s : ss + "," + s;
+                                                              })
+                                           >> [&](unique_ptr<string> device_key_p) {
+                                               if (device_key_p) {
+                                                   devices_list.push_back(*device_key_p);
+                                               }
+                                           };
+
+
+                                response_message.result = devices_list;
+
+                            } catch (exception &e) {
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        e.what());
+                            }
+                        } else {
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "devices not found");
                         }
 
                         ws_response->body = api::json_rpc::serialize(response_message);

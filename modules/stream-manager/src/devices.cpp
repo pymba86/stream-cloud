@@ -4,6 +4,7 @@
 #include "websocket.hpp"
 #include "task.hpp"
 #include "json-rpc.hpp"
+#include <unordered_set>
 
 namespace stream_cloud {
 
@@ -17,7 +18,61 @@ namespace stream_cloud {
 
             ~impl() = default;
 
+            bool is_reg_device(const std::string &device_key) const {
+                return devices_reg.find(device_key) != devices_reg.end();
+            }
+
+            bool is_reg_device_id(const api::transport_id id) const {
+
+                auto it = std::find_if(std::begin(devices_reg), std::end(devices_reg), [&](auto &&p) {
+                    return p.second == id;
+                });
+
+                return it != std::end(devices_reg);
+            }
+
+            void add_reg_device(const std::string &device_key,
+                                api::transport_id transport_id, std::unordered_set<std::string> actions,
+                                std::unordered_set<std::string> variables) {
+                devices_reg.emplace(device_key, transport_id);
+                device_actions_reg.emplace(device_key, actions);
+                device_variables_reg.emplace(device_key, variables);
+            }
+
+            void remove_reg_device(const std::string &device_key) {
+                devices_reg.erase(device_key);
+                device_actions_reg.erase(device_key);
+                device_variables_reg.erase(device_key);
+            }
+
+            api::transport_id get_device_transport_id(const std::string &key) const {
+                return devices_reg.at(key);
+            }
+
+            const std::unordered_set<std::string> &get_device_actions(const std::string &key) const {
+                return device_actions_reg.at(key);
+            }
+
+            const std::unordered_set<std::string> &get_device_variables(const std::string &key) const {
+                return device_variables_reg.at(key);
+            }
+
             sqlite::database db_;
+
+        private:
+            // Список подключенных устройств
+            // Необходим для меньших запросов к базе данных (кэш)
+            std::unordered_map<std::string, api::transport_id> devices_reg;
+
+        private:
+
+            // Список зарегистрированных действий устройства
+            // device_key -> device_action
+            std::unordered_map<std::string, std::unordered_set<std::string>> device_actions_reg;
+
+            // Список переменных устройства
+            // device_key -> device_variable
+            std::unordered_map<std::string, std::unordered_set<std::string>> device_variables_reg;
 
         };
 
@@ -31,7 +86,7 @@ namespace stream_cloud {
                         auto &task = ctx.message().body<api::task>();
 
                         auto name = task.request.params["name"].as<std::string>();
-                        auto profile_login = task.storage["user.login"];
+                        auto user_login = task.storage["user.login"];
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
@@ -40,7 +95,7 @@ namespace stream_cloud {
 
                         if (!name.empty() && name.size() <= 6) {
 
-                            std::string key = profile_login + "." + name;
+                            std::string key = user_login + "." + name;
 
                             try {
                                 pimpl->db_ << "insert into devices (name, key) values (?,?);"
@@ -134,14 +189,13 @@ namespace stream_cloud {
                         try {
                             api::json::json_array managers_list;
 
-                            pimpl->db_ << "select name, key, status from devices;"
+                            pimpl->db_ << "select name, key from devices;"
                                        >> [&](std::string name, std::string key, std::string status) {
 
                                            api::json::json_map manager;
 
                                            manager["name"] = name;
                                            manager["key"] = key;
-                                           manager["status"] = status;
 
                                            managers_list.push_back(manager);
                                        };
@@ -166,6 +220,218 @@ namespace stream_cloud {
 
                     })
             );
+
+            attach(
+                    behavior::make_handler("detail", [this](behavior::context &ctx) -> void {
+                        // Получить список устройств
+
+                        auto &task = ctx.message().body<api::task>();
+
+                        auto key = task.request.params["key"].as<std::string>();
+
+                        // Отправляем ответ
+                        auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
+
+                        if (pimpl->is_reg_device(key)) {
+                            if (!key.empty()) {
+                                try {
+                                    api::json::json_map device_info;
+
+                                    pimpl->db_ << "select key, name from devices where key = ? limit 1;"
+                                               << key
+                                               >> [&](std::string key, std::string name) {
+
+                                                   device_info["name"] = name;
+                                                   device_info["key"] = key;
+
+                                                   const auto &device_actions = pimpl->get_device_actions(key);
+                                                   api::json::json_array result_actions;
+
+                                                   for (auto const &action : device_actions) {
+                                                       result_actions.push_back(action);
+                                                   }
+
+                                                   const auto &device_variables = pimpl->get_device_variables(key);
+                                                   api::json::json_array result_variables;
+
+                                                   for (auto const &variable : device_variables) {
+                                                       result_variables.push_back(variable);
+                                                   }
+
+                                                   device_info["actions"] = result_actions;
+                                                   device_info["variables"] = result_variables;
+
+                                               };
+
+                                    response_message.result = device_info;
+
+                                } catch (exception &e) {
+                                    response_message.error = api::json_rpc::response_error(
+                                            api::json_rpc::error_code::unknown_error_code,
+                                            e.what());
+                                }
+                            } else {
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        "key device empty");
+                            }
+                        } else {
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "device not connected");
+                        }
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
+
+                        ctx->addresses("ws")->send(
+                                messaging::make_message(
+                                        ctx->self(),
+                                        "write",
+                                        api::transport(ws_response)
+                                )
+                        );
+
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("control", [this](behavior::context &ctx) -> void {
+
+                        /* 1) Получить список групп по device-key в connections
+                           2) из connections отправить список групп в subscriptions
+                              на проверку принадлежности хоть к одной группе
+                           3) Отправить команду в devices:request
+                        */
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("connect", [this](behavior::context &ctx) -> void {
+                        // Подключение устройство к менеджеру
+
+                        auto &task = ctx.message().body<api::task>();
+
+                        auto key = task.request.params["key"].as<std::string>();
+                        auto actions = task.request.params["actions"].as<api::json::json_array>();
+                        auto variables = task.request.params["variables"].as<api::json::json_array>();
+
+                        // Отправляем ответ
+                        auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
+
+                        if (pimpl->is_reg_device(key)) {
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "device already connect");
+                        } else {
+
+                            try {
+
+                                // Проверяем на наличие
+                                int count_device_key = 0;
+                                pimpl->db_ << "select count(*) from devices where key = ?;"
+                                           << key
+                                           >> count_device_key;
+
+                                if (count_device_key > 0) {
+
+                                    if (!actions.empty() || !variables.empty()) {
+
+                                        response_message.result = true;
+
+                                        // Добавляем действия устройства
+                                        std::unordered_set<std::string> device_actions;
+
+                                        for (auto const &action : actions) {
+                                            device_actions.emplace(action.as<std::string>());
+                                        }
+
+                                        // Добавляем переменные устройства
+                                        std::unordered_set<std::string> device_variables;
+
+                                        for (auto const &variable : variables) {
+                                            device_variables.emplace(variable.as<std::string>());
+                                        }
+
+                                        pimpl->add_reg_device(key, task.transport_id_, device_actions,
+                                                              device_variables);
+
+                                    } else {
+                                        response_message.error = api::json_rpc::response_error(
+                                                api::json_rpc::error_code::unknown_error_code,
+                                                "device control contains actions and/or variables");
+                                    }
+
+                                } else {
+                                    response_message.error = api::json_rpc::response_error(
+                                            api::json_rpc::error_code::unknown_error_code,
+                                            "device not found");
+                                }
+
+                            } catch (exception &e) {
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        e.what());
+                            }
+                        }
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
+
+                        ctx->addresses("ws")->send(
+                                messaging::make_message(
+                                        ctx->self(),
+                                        "write",
+                                        api::transport(ws_response)
+                                )
+                        );
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("disconnect", [this](behavior::context &ctx) -> void {
+                        // Отключаемся от менеждера
+
+                        auto &task = ctx.message().body<api::task>();
+
+                        auto key = task.request.params["key"].as<std::string>();
+
+                        // Отправляем ответ
+                        auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
+
+                        if (pimpl->is_reg_device(task.transport_id_)) {
+                            try {
+                                response_message.result = true;
+                                pimpl->remove_reg_device(key);
+                                return;
+                            } catch (exception &e) {
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        e.what());
+                            }
+                        } else {
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "transport id not equals! wft?");
+                        }
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
+
+                        ctx->addresses("ws")->send(
+                                messaging::make_message(
+                                        ctx->self(),
+                                        "write",
+                                        api::transport(ws_response)
+                                )
+                        );
+
+                    })
+            );
+
         }
 
         void devices::startup(config::config_context_t *) {
@@ -178,8 +444,7 @@ namespace stream_cloud {
             db <<
                "create table if not exists devices ("
                "   key text primary key not null,"
-               "   name text not null,"
-               "   status integer not null default 0"
+               "   name text not null"
                ");";
 
             pimpl = std::make_unique<impl>(db);

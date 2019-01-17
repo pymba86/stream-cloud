@@ -3,8 +3,9 @@
   "ws-port": "8091",
   "profile-key": "pymba86.123",
   "manager-key": "pymba86.home",
+  "device-key": "pymba86.dev1",
   "client": {
     "ip": "127.0.0.1",
-    "port": "8081"
+    "port": "8091"
   }
 }

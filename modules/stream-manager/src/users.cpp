@@ -309,7 +309,7 @@ namespace stream_cloud {
                                            >> [&](unique_ptr<string> login_p, unique_ptr<string> password_p) {
                                                login = login_p ? *login_p : string();
                                                password = password_p ? *password_p : string();
-                                           };;
+                                           };
 
                                 if (user[1] == password) {
                                     // Если пользователь зарегистрирован

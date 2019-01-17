@@ -118,7 +118,7 @@ namespace stream_cloud {
 
             attach(
                     behavior::make_handler("list", [this](behavior::context &ctx) -> void {
-                        // Получить подписчиков
+                        // Получить всех подписчиков
 
                         auto &task = ctx.message().body<api::task>();
 
@@ -162,6 +162,57 @@ namespace stream_cloud {
                                         api::transport(ws_response)
                                 )
                         );
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("devices", [this](behavior::context &ctx) -> void {
+                        // Получить список устройств к которым подписан авторизованный пользователь
+
+                        auto &task = ctx.message().body<api::task>();
+
+                        auto user_login = task.storage["user.login"];
+
+                        try {
+
+                            api::json::json_array groups_list;
+
+                            pimpl->db_ << "select group_key from subscriptions where user_login = ?;"
+                                       << user_login
+                                       >> [&](std::string group_key) {
+                                           groups_list.push_back(group_key);
+                                       };
+
+                            task.request.params = groups_list;
+
+                            ctx->addresses("connections")->send(
+                                    messaging::make_message(
+                                            ctx->self(),
+                                            "groups",
+                                            std::move(task)
+                                    )
+                            );
+                        } catch (exception &e) {
+
+                            // Отправляем ошибку
+                            auto ws_response = new api::web_socket(task.transport_id_);
+                            api::json_rpc::response_message response_message;
+                            response_message.id = task.request.id;
+
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    e.what());
+
+                            ws_response->body = api::json_rpc::serialize(response_message);
+
+                            ctx->addresses("ws")->send(
+                                    messaging::make_message(
+                                            ctx->self(),
+                                            "write",
+                                            api::transport(ws_response)
+                                    )
+                            );
+                        }
                     })
             );
         }
