@@ -37,7 +37,7 @@ void init_service(config::dynamic_environment &env) {
 
     auto &router = env.add_service<platform::router>();
     auto &http = env.add_data_provider<providers::http_server::http_server>(router->entry_point());
-    auto &ws = env.add_data_provider<providers::ws_server::ws_server>(router->entry_point());
+    auto &ws = env.add_data_provider<providers::ws_server::ws_server>(router->entry_point(), std::initializer_list<actor::actor_address>{});
     auto &settings = env.add_service<settings::settings>();
     auto &profile = env.add_service<platform::profile>();
     auto &managers = env.add_service<platform::managers>();

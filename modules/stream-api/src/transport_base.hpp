@@ -22,7 +22,7 @@ namespace stream_cloud {
             auto type() -> transport_type;
             auto id() -> transport_id;
 
-        protected:
+        public:
             transport_type  type_;
             transport_id    id_;
 

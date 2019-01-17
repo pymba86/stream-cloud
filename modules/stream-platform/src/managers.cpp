@@ -348,27 +348,25 @@ namespace stream_cloud {
             attach(
                     behavior::make_handler("request", [this](behavior::context &ctx) -> void {
 
-                        // FIXME Что тут вообще твориться?
-                        auto &task_ = ctx.message().body<api::task>();
+                        auto &task = ctx.message().body<api::task>();
 
-                        auto manager_key = task_.request.metadata["manager-key"].get<std::string>();
+                        auto manager_key = task.request.metadata["manager-key"].get<std::string>();
 
                         if (pimpl->is_reg_manager(manager_key)) {
 
                             auto manager_transport_id = pimpl->get_manager_transport_id(manager_key);
 
-                            api::json::json_map metadata;
-                            metadata["transport"] = {task_.transport_id_};
+                            task.request.metadata["transport"] = task.transport_id_;
 
-                            // send request to manager
+                            // Отправляем сообщение менеджеру
                             auto ws_response = new api::web_socket(manager_transport_id);
 
-                            api::json_rpc::notify_message notify_manager_message;
-                            notify_manager_message.method = task_.request.method;
-                            notify_manager_message.params = task_.request.params;
-                            notify_manager_message.metadata = metadata;
+                            api::json_rpc::request_message request_manager_message;
+                            request_manager_message.method = task.request.method;
+                            request_manager_message.params = task.request.params;
+                            request_manager_message.metadata = task.request.metadata;
 
-                            ws_response->body = api::json_rpc::serialize(notify_manager_message);
+                            ws_response->body = api::json_rpc::serialize(request_manager_message);
 
                             ctx->addresses("ws")->send(
                                     messaging::make_message(
@@ -379,7 +377,24 @@ namespace stream_cloud {
                             );
 
                         } else {
-                            // Менеджер не найден или не подключен
+
+                            // Отправляем сообщение отправителю
+                            auto ws_response = new api::web_socket(task.transport_id_);
+                            api::json_rpc::response_message response_message;
+                            response_message.id = task.request.id;
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "manager not connection");
+
+                            ws_response->body = api::json_rpc::serialize(response_message);
+
+                            ctx->addresses("ws")->send(
+                                    messaging::make_message(
+                                            ctx->self(),
+                                            "write",
+                                            api::transport(ws_response)
+                                    )
+                            );
                         }
                     })
             );
@@ -387,37 +402,27 @@ namespace stream_cloud {
             attach(
                     behavior::make_handler("response", [this](behavior::context &ctx) -> void {
 
-                        auto &ws = ctx.message().body<api::web_socket>();
+                        auto transport = ctx.message().body<api::transport>();
+
+                        auto *ws = static_cast<api::web_socket *>(transport.get());
 
                         // Отправляем ответ от проверенного менеджера клиенту
-                        if (pimpl->is_reg_manager_id(ws.id())) {
+                        api::json::json_map message{api::json::data{ws->body}};
 
-                            api::json_rpc::response_message response_message;
-                            api::json_rpc::parse(ws.body, response_message);
+                        auto transports_id = message["metadata"]["transport"].as<api::transport_id>();
+                        message["metadata"].as<api::json::json_map>().clear();
 
-                            // FIXME Проверка на вид ответа(response, notify) - разные ответы, колличество участников
+                        auto ws_response = new api::web_socket(transports_id);
+                        ws_response->body = message.to_string();
 
-                            auto transports_id = response_message.metadata["transport"].as<api::json::json_array>();
+                        ctx->addresses("ws")->send(
+                                messaging::make_message(
+                                        ctx->self(),
+                                        "write",
+                                        api::transport(ws_response)
+                                )
+                        );
 
-                            // Формируем ответ
-                            std::string response = api::json_rpc::serialize(response_message);
-
-                            for (auto const &id : transports_id) {
-
-                                const auto &transport_id = id.as<api::transport_id>();
-
-                                auto ws_response = new api::web_socket(transport_id);
-                                ws_response->body = response;
-
-                                ctx->addresses("ws")->send(
-                                        messaging::make_message(
-                                                ctx->self(),
-                                                "write",
-                                                api::transport(ws_response)
-                                        )
-                                );
-                            }
-                        }
                     })
             );
         }

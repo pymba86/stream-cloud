@@ -31,6 +31,16 @@ namespace stream_cloud {
                 std::cerr << (std::string(what) + ": " + ec.message() + "\n");
             }
 
+            template<class NextLayer>
+            inline void setup_stream(websocket::stream<NextLayer> &ws) {
+                websocket::permessage_deflate pmd;
+                pmd.client_enable = false;
+                pmd.server_enable = false;
+                pmd.compLevel = 3;
+                ws.set_option(pmd);
+                ws.auto_fragment(true);
+                ws.read_message_max(64 * 1024 * 1024);
+            }
 
             class ws_session : public std::enable_shared_from_this<ws_session> {
 
@@ -101,17 +111,6 @@ namespace stream_cloud {
                         actor::actor_address pipe_
                 );
 
-                template<class NextLayer>
-                inline void setup_stream(websocket::stream<NextLayer> &ws) {
-                    websocket::permessage_deflate pmd;
-                    pmd.client_enable = false;
-                    pmd.server_enable = false;
-                    pmd.compLevel = 3;
-                    ws.set_option(pmd);
-                    ws.auto_fragment(true);
-                    ws.read_message_max(64 * 1024 * 1024);
-                }
-
                 void run(const std::string& host_, const std::string& text_);
 
                 void write(const intrusive_ptr<api::web_socket> &ptr);
@@ -131,6 +130,8 @@ namespace stream_cloud {
                 void on_handshake(boost::system::error_code ec);
 
                 void close();
+
+            public:
 
                 const api::transport_id id_;
 

@@ -85,6 +85,7 @@ namespace stream_cloud {
                 std::string address_ = ctx->config()["client"]["ip"].as<std::string>();
                 auto string_port = ctx->config()["client"]["port"].as<std::string>();
                 pimpl->session_->run(address_, string_port);
+
             }
 
             void ws_client::shutdown() {

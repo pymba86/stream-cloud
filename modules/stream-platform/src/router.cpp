@@ -161,12 +161,15 @@ namespace stream_cloud {
                                         }
                                     } else if (api::json_rpc::is_response(message)) {
 
+                                        auto ws_response = new api::web_socket(ws->id());
+                                        ws_response->body = message.to_string();
+
                                         // Отправляем сообщение от менеджера
                                         ctx->addresses("managers")->send(
                                                 messaging::make_message(
                                                         ctx->self(),
                                                         "response",
-                                                        api::transport(ws)
+                                                        api::transport(ws_response)
                                                 )
                                         );
                                     }
@@ -290,7 +293,6 @@ namespace stream_cloud {
                         }
                     })
             );
-
         }
 
         router::~router() {

@@ -27,9 +27,9 @@
 using namespace stream_cloud;
 
 
-void signal_sigsegv(int signum){
-    boost::stacktrace::stacktrace bt ;
-    if(bt){
+void signal_sigsegv(int signum) {
+    boost::stacktrace::stacktrace bt;
+    if (bt) {
         std::cerr << "Signal"
                   << signum
                   << " , backtrace:"
@@ -41,8 +41,7 @@ void signal_sigsegv(int signum){
 }
 
 
-
-void init_service(config::dynamic_environment&env) {
+void init_service(config::dynamic_environment &env) {
 
     // Сервисы
     auto &router = env.add_service<manager::router>();
@@ -56,9 +55,12 @@ void init_service(config::dynamic_environment&env) {
     // TODO Передалать на   environment::cooperation::link
 
     // Поставшики данных
-    auto& client_provider = env.add_data_provider<client::ws_client::ws_client>(platform->entry_point());
-    auto &ws_provider = env.add_data_provider<providers::ws_server::ws_server>(router->entry_point());
-    auto& http_provider = env.add_data_provider<providers::http_server::http_server>(router->entry_point());
+    auto &client_provider = env.add_data_provider<client::ws_client::ws_client>(platform->entry_point());
+    auto &ws_provider = env.add_data_provider<providers::ws_server::ws_server>(
+            router->entry_point(),
+            std::initializer_list<actor::actor_address>{platform->entry_point()}
+    );
+    auto &http_provider = env.add_data_provider<providers::http_server::http_server>(router->entry_point());
 
     // Пользователи
     users->add_shared(ws_provider.address().operator->());
@@ -136,7 +138,7 @@ void init_service(config::dynamic_environment&env) {
 
 int main(int argc, char **argv) {
 
-    ::signal(SIGSEGV,&signal_sigsegv);
+    ::signal(SIGSEGV, &signal_sigsegv);
 
     config::configuration config;
 

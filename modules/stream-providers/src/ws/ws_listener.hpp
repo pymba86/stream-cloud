@@ -36,7 +36,8 @@ namespace stream_cloud {
                 ws_listener(
                         boost::asio::io_context &ioc,
                         tcp::endpoint endpoint,
-                        actor::actor_address
+                        actor::actor_address,
+                        std::initializer_list<actor::actor_address>
                 );
 
                 void write(const intrusive_ptr<api::web_socket>& ptr);
@@ -57,7 +58,8 @@ namespace stream_cloud {
                 boost::asio::strand<boost::asio::io_context::executor_type> strand_;
                 tcp::acceptor acceptor_;
                 tcp::socket socket_;
-                actor::actor_address pipe_;
+                actor::actor_address main_pipe_;
+                std::vector<actor::actor_address> pipe_;
                 std::unordered_map<api::transport_id,std::shared_ptr<ws_session>> storage_sessions;
             };
 

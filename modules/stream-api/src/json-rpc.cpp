@@ -117,6 +117,10 @@ namespace stream_cloud {
 
                 obj["id"] = msg.id;
 
+                if (!msg.metadata.empty()) {
+                    obj["metadata"] = msg.metadata;
+                }
+
                 return obj.to_string();
             }
 

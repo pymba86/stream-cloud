@@ -27,23 +27,26 @@ namespace stream_cloud {
 
             };
 
-            ws_server::ws_server(config::config_context_t *ctx, actor::actor_address address):data_provider(ctx,"ws"),pimpl(new impl) {
+            ws_server::ws_server(config::config_context_t *ctx, actor::actor_address address,
+                                 std::initializer_list<actor::actor_address> pipe) : data_provider(ctx, "ws"),
+                                                                                     pimpl(new impl) {
 
-                boost::asio::ip::address address_ =  boost::asio::ip::make_address("127.0.0.1");
+                boost::asio::ip::address address_ = boost::asio::ip::make_address("127.0.0.1");
 
                 auto string_port = ctx->config()["ws-port"].as<std::string>();
                 auto tmp_port = std::stoul(string_port);
 
                 auto port = static_cast<unsigned short>(tmp_port);
-
-                pimpl->listener_ = std::make_shared<ws_listener>(ctx->main_loop(), tcp::endpoint{address_, port},address);
+                pimpl->listener_ = std::make_shared<ws_listener>(ctx->main_loop(), tcp::endpoint{address_, port},
+                                                                 address, pipe);
 
                 attach(
                         behavior::make_handler(
                                 "write",
-                                [this](behavior::context& ctx) -> void {
+                                [this](behavior::context &ctx) -> void {
                                     auto t = ctx.message().body<api::transport>();
-                                    std::unique_ptr<api::web_socket> transport(static_cast<api::web_socket*>(t.release()));
+                                    std::unique_ptr<api::web_socket> transport(
+                                            static_cast<api::web_socket *>(t.release()));
                                     pimpl->listener_->write(std::move(transport));
                                 }
                         )
@@ -52,9 +55,10 @@ namespace stream_cloud {
                 attach(
                         behavior::make_handler(
                                 "close",
-                                [this](behavior::context& ctx) -> void {
+                                [this](behavior::context &ctx) -> void {
                                     auto t = ctx.message().body<api::transport>();
-                                    std::unique_ptr<api::web_socket> transport(static_cast<api::web_socket*>(t.release()));
+                                    std::unique_ptr<api::web_socket> transport(
+                                            static_cast<api::web_socket *>(t.release()));
                                     pimpl->listener_->close(std::move(transport));
                                 }
                         )
@@ -63,14 +67,14 @@ namespace stream_cloud {
                 attach(
                         behavior::make_handler(
                                 "remove",
-                                [this](behavior::context& ctx) -> void {
+                                [this](behavior::context &ctx) -> void {
                                     auto t = ctx.message().body<api::transport>();
-                                    std::unique_ptr<api::web_socket> transport(static_cast<api::web_socket*>(t.release()));
+                                    std::unique_ptr<api::web_socket> transport(
+                                            static_cast<api::web_socket *>(t.release()));
                                     pimpl->listener_->remove(std::move(transport));
                                 }
                         )
                 );
-
 
             }
 

@@ -6,12 +6,15 @@ namespace stream_cloud {
     namespace providers {
         namespace ws_server {
             using clock = std::chrono::steady_clock;
+            constexpr const char *write_handler_name = "write";
 
-            ws_listener::ws_listener(boost::asio::io_context &ioc, tcp::endpoint endpoint, actor::actor_address pipe_) :
+            ws_listener::ws_listener(boost::asio::io_context &ioc, tcp::endpoint endpoint,
+                                     actor::actor_address main_pipe, std::initializer_list<actor::actor_address> pipe) :
                     strand_(ioc.get_executor()),
                     acceptor_(ioc),
                     socket_(ioc),
-                    pipe_(pipe_) {
+                    main_pipe_(main_pipe),
+                    pipe_(pipe) {
 
                 boost::system::error_code ec;
 
@@ -66,7 +69,7 @@ namespace stream_cloud {
                 } else {
                     api::transport_id id_ = std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(
                             clock::now().time_since_epoch()).count());
-                    auto session = std::make_shared<ws_session>(std::move(socket_), id_, pipe_);
+                    auto session = std::make_shared<ws_session>(std::move(socket_), id_, main_pipe_);
                     storage_sessions.emplace(id_, std::move(session));
                     storage_sessions.at(id_)->run();
 
@@ -80,6 +83,17 @@ namespace stream_cloud {
                 if (storage_sessions.count(ptr->id())) {
                     auto session = storage_sessions.at(ptr->id());
                     session->write(ptr);
+                } else {
+
+                    for (auto const &pipe : pipe_) {
+                        pipe->send(
+                                messaging::make_message(
+                                        pipe,
+                                        write_handler_name,
+                                        api::transport(ptr)
+                                )
+                        );
+                    }
                 }
 
             }

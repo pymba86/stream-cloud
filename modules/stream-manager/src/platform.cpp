@@ -54,15 +54,30 @@ namespace stream_cloud {
 
                             if (api::json_rpc::is_request(message)) {
 
-                                // Если есть manager-key - отпраявляем router:dispatcher
 
                                 api::task task_;
                                 task_.transport_id_ = ws->id();
                                 api::json_rpc::parse(message, task_.request);
 
-                                // Отключаемся от платформы
-                                if (task_.request.method == "disconnect") {
+                                if (api::json_rpc::contains(task_.request.metadata,
+                                                            "transport")) {
+                                    // Обрабатываем сообщение от платформы
 
+                                    auto id = message["metadata"]["transport"].as<api::transport_id>();
+                                    auto *ws_platform = new api::web_socket(id);
+                                    ws_platform->body = message.to_string();
+
+                                    ctx->addresses("router")->send(
+                                            messaging::make_message(
+                                                    ctx->self(),
+                                                    "dispatcher",
+                                                    api::transport(ws_platform)
+                                            )
+                                    );
+
+                                } else if (task_.request.method == "disconnect") {
+
+                                    // Отключаемся от платформы
                                     ctx->addresses("client")->send(
                                             messaging::make_message(
                                                     ctx->self(),
@@ -87,7 +102,7 @@ namespace stream_cloud {
 
                                 std::cout << "manager disconnect from platform" << std::endl;
 
-                            } else {
+                            } else if (api::json_rpc::is_response(message)) {
                                 std::cout << "platform: " << message << std::endl;
 
                                 std::cout << "manager connecting from platform: OK" << std::endl;
@@ -173,6 +188,45 @@ namespace stream_cloud {
                                         )
                                 );
                             }
+                        }
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("write", [this](behavior::context &ctx) -> void {
+                        // Обработчик после отправки сообщения
+
+                        auto transport = ctx.message().body<api::transport>();
+                        auto transport_type = transport->type();
+
+                        if (transport_type == api::transport_type::ws) {
+
+                            auto *ws = static_cast<api::web_socket *>(transport.get());
+
+                            api::json::json_map message{api::json::data{ws->body}};
+
+                            api::json::json_map metadata;
+
+                            if (api::json_rpc::contains(message, "metadata")) {
+                                metadata = message["metadata"].as<api::json::json_map>();
+                            }
+
+                            metadata["transport"] = ws->id();
+
+                            message["metadata"] = metadata;
+
+
+                            auto ws_response = new api::web_socket(ws->id());
+                            ws_response->body = message.to_string();
+
+                            ctx->addresses("client")->send(
+                                    messaging::make_message(
+                                            ctx->self(),
+                                            "write",
+                                            api::transport(ws_response)
+                                    )
+                            );
+
                         }
                     })
             );

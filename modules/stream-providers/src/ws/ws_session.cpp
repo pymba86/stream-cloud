@@ -25,8 +25,7 @@ namespace stream_cloud {
                 }
             }
 
-            void ws_session::close()
-            {
+            void ws_session::close() {
                 boost::system::error_code ec;
                 ws_.close(boost::beast::websocket::close_code::normal, ec);
             }
@@ -39,23 +38,25 @@ namespace stream_cloud {
                 }
 
                 if (ec) {
+
                     auto *error_m = new api::error(id_);
                     error_m->code = ec;
-                    pipe_->send(
+                    main_pipe_->send(
                             messaging::make_message(
-                                    pipe_,
+                                    main_pipe_,
                                     error,
                                     api::transport(error_m)
                             )
                     );
+
                     return;
                 }
 
                 auto *ws = new api::web_socket(id_);
                 ws->body = boost::beast::buffers_to_string(buffer_.data());
-                pipe_->send(
+                main_pipe_->send(
                         messaging::make_message(
-                                pipe_,
+                                main_pipe_,
                                 dispatcher,
                                 api::transport(ws)
                         )
@@ -108,11 +109,11 @@ namespace stream_cloud {
                 );
             }
 
-            ws_session::ws_session(tcp::socket socket, api::transport_id id, actor::actor_address pipe_) :
+            ws_session::ws_session(tcp::socket socket, api::transport_id id, actor::actor_address main_pipe) :
                     ws_(std::move(socket)),
                     strand_(ws_.get_executor()),
                     id_(id),
-                    pipe_(pipe_),
+                    main_pipe_(main_pipe),
                     queue_(*this) {
                 setup_stream(ws_);
             }
@@ -121,6 +122,14 @@ namespace stream_cloud {
 
                 queue_(ptr->body);
             }
+
+            api::transport_id ws_session::id() const {
+                return id_;
+            }
+
+            void ws_session::write(const std::string &value) {
+                queue_(value);
+            };
 
             bool ws_session::queue::on_write() {
                 BOOST_ASSERT(!items_.empty());

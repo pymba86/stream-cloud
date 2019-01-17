@@ -77,6 +77,37 @@ namespace stream_cloud {
                                         boost::algorithm::split(dispatcher, task_.request.method,
                                                                 boost::is_any_of("."));
 
+
+                                        if (api::json_rpc::contains(task_.request.metadata,
+                                                                    "manager-key")) {
+
+                                            // Проверяем на соответствие ключей
+                                            auto key = task_.request.metadata["manager-key"].as<std::string>();
+
+                                            if (key != pimpl->manager_key) {
+
+                                                auto ws_response = new api::web_socket(task_.transport_id_);
+                                                api::json_rpc::response_message response_message;
+                                                response_message.id = task_.request.id;
+                                                response_message.metadata = task_.request.metadata;
+
+                                                response_message.error = api::json_rpc::response_error(
+                                                        api::json_rpc::error_code::unknown_error_code,
+                                                        "manager key not equals");
+
+                                                ws_response->body = api::json_rpc::serialize(response_message);
+
+                                                ctx->addresses("ws")->send(
+                                                        messaging::make_message(
+                                                                ctx->self(),
+                                                                "write",
+                                                                api::transport(ws_response)
+                                                        )
+                                                );
+                                                return;
+                                            }
+                                        }
+
                                         if (dispatcher.size() > 1) {
 
                                             const auto service_name = dispatcher.at(0);
@@ -159,7 +190,8 @@ namespace stream_cloud {
 
                                     } else if (api::json_rpc::is_response(message)) {
                                         // Ответ от устройства
-                                        std::cout << "device: " << api::json::json_map{api::json::data{ws->body}} << std::endl;
+                                        std::cout << "device: " << api::json::json_map{api::json::data{ws->body}}
+                                                  << std::endl;
                                     }
                                 } else if (transport_type == api::transport_type::http) {
                                     // Проверяем на trusted_url

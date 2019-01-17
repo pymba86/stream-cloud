@@ -20,7 +20,6 @@ namespace stream_cloud {
             constexpr const char *handshake = "handshake";
             constexpr const char *error = "error";
 
-
             void ws_session::on_write(boost::system::error_code ec, std::size_t bytes_transferred) {
                 boost::ignore_unused(bytes_transferred);
 

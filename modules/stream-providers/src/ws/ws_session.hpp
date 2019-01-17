@@ -120,7 +120,11 @@ namespace stream_cloud {
 
                 void write(const intrusive_ptr<api::web_socket> &ptr);
 
+                void write(const std::string &value);
+
                 void close();
+
+                api::transport_id id() const;
 
                 void on_accept(boost::system::error_code ec);
 
@@ -138,7 +142,7 @@ namespace stream_cloud {
                 websocket::stream<tcp::socket> ws_;
                 boost::asio::strand<boost::asio::io_context::executor_type> strand_;
                 boost::beast::multi_buffer buffer_;
-                actor::actor_address pipe_;
+                actor::actor_address main_pipe_;
                 queue queue_;
             };
 

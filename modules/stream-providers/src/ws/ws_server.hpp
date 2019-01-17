@@ -7,7 +7,7 @@ namespace stream_cloud {
         namespace ws_server {
         class ws_server final : public config::data_provider {
             public:
-                ws_server(config::config_context_t *, actor::actor_address);
+                ws_server(config::config_context_t *, actor::actor_address address, std::initializer_list<actor::actor_address>);
 
                 ~ws_server();
 
