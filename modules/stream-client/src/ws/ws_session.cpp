@@ -11,12 +11,15 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include "error.hpp"
 
 namespace stream_cloud {
     namespace client {
         namespace ws_client {
             constexpr const char *dispatcher = "dispatcher";
             constexpr const char *handshake = "handshake";
+            constexpr const char *error = "error";
+
 
             void ws_session::on_write(boost::system::error_code ec, std::size_t bytes_transferred) {
                 boost::ignore_unused(bytes_transferred);
@@ -42,6 +45,15 @@ namespace stream_cloud {
                 }
 
                 if (ec) {
+                    auto *error_m = new api::error(id_);
+                    error_m->code = ec;
+                    pipe_->send(
+                            messaging::make_message(
+                                    pipe_,
+                                    error,
+                                    api::transport(error_m)
+                            )
+                    );
                     return;
                 }
 

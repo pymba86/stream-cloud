@@ -98,6 +98,12 @@ namespace stream_cloud {
                 storage_sessions.erase(ptr->id());
             }
 
+            void ws_listener::close_all() {
+                for (const auto &session : storage_sessions) {
+                    session.second->close();
+                }
+                storage_sessions.clear();
+            };
         }
     }
 }

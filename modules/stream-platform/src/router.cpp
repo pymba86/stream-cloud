@@ -253,7 +253,7 @@ namespace stream_cloud {
 
             attach(
                     behavior::make_handler("error", [this](behavior::context &ctx) -> void {
-                        // Закрытие соединения
+                        // Обработка ошибок
 
                         auto transport = ctx.message().body<api::transport>();
                         auto transport_type = transport->type();
@@ -261,8 +261,6 @@ namespace stream_cloud {
                         if (transport_type == api::transport_type::ws) {
 
                             auto *error = static_cast<api::error *>(transport.get());
-
-                            std::cout << error->code.message() << std::endl;
 
                             if (error->code == boost::asio::error::connection_reset
                                 || error->code == boost::asio::error::not_connected) {

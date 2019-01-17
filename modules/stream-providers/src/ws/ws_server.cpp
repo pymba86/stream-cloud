@@ -82,7 +82,7 @@ namespace stream_cloud {
             }
 
             void ws_server::shutdown() {
-
+                pimpl->listener_->close_all();
             }
 
         }

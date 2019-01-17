@@ -5,7 +5,7 @@
 #include <boost/algorithm/cxx11/any_of.hpp>
 
 #include "router.hpp"
-
+#include <error.hpp>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -276,8 +276,41 @@ namespace stream_cloud {
 
             attach(
                     behavior::make_handler("error", [this](behavior::context &ctx) -> void {
-                        // Обработчка системных ошибок
-                        auto &error = ctx.message().body<std::string>();
+                        // Обработка ошибок
+
+                        auto transport = ctx.message().body<api::transport>();
+                        auto transport_type = transport->type();
+
+                        if (transport_type == api::transport_type::ws) {
+
+                            auto *error = static_cast<api::error *>(transport.get());
+
+                            if (error->code == boost::asio::error::connection_reset
+                                || error->code == boost::asio::error::not_connected) {
+                                // Соединение сброшено на другой стороне
+
+                                auto ws_response = new api::web_socket(error->id());
+
+                                ctx->addresses("ws")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "remove",
+                                                api::transport(ws_response)
+                                        )
+                                );
+
+                            } else {
+                                auto ws_response = new api::web_socket(error->id());
+
+                                ctx->addresses("ws")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "close",
+                                                api::transport(ws_response)
+                                        )
+                                );
+                            }
+                        }
                     })
             );
         }

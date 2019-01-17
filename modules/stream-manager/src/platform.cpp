@@ -5,6 +5,7 @@
 #include <boost/algorithm/cxx11/any_of.hpp>
 
 #include "platform.hpp"
+#include "error.hpp"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -89,6 +90,8 @@ namespace stream_cloud {
                             } else {
                                 std::cout << "platform: " << message << std::endl;
 
+                                std::cout << "manager connecting from platform: OK" << std::endl;
+
 
                                 // FIXME При каждом ответе устанавливается значение. Убрать
                                 api::json_rpc::request_message request_message;
@@ -133,6 +136,44 @@ namespace stream_cloud {
                                         api::transport(ws_response)
                                 )
                         );
+
+                        std::cout << "manager connecting from platform" << std::endl;
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("error", [this](behavior::context &ctx) -> void {
+                        // Обработка ошибок
+
+                        auto transport = ctx.message().body<api::transport>();
+                        auto transport_type = transport->type();
+
+                        if (transport_type == api::transport_type::ws) {
+
+                            auto *error = static_cast<api::error *>(transport.get());
+
+                            if (error->code == boost::asio::error::connection_reset
+                                || error->code == boost::asio::error::not_connected
+                                || error->code == boost::asio::error::eof) {
+                                // Соединение сброшено на другой стороне
+
+                                std::cout << "manager disconnect from platform" << std::endl;
+
+                            } else {
+
+                                std::cout << "error client platform: " << error->code.message() << std::endl;
+
+                                auto ws_response = new api::web_socket(error->id());
+
+                                ctx->addresses("client")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "close",
+                                                api::transport(ws_response)
+                                        )
+                                );
+                            }
+                        }
                     })
             );
 
