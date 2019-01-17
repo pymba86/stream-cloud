@@ -120,6 +120,8 @@ namespace stream_cloud {
 
                 void write(const intrusive_ptr<api::web_socket> &ptr);
 
+                void close();
+
                 void on_accept(boost::system::error_code ec);
 
                 void do_read();

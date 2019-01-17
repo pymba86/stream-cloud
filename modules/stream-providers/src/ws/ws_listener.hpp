@@ -41,6 +41,10 @@ namespace stream_cloud {
 
                 void write(const intrusive_ptr<api::web_socket>& ptr);
 
+                void close(const intrusive_ptr<api::web_socket>& ptr);
+
+                void remove(const intrusive_ptr<api::web_socket>& ptr);
+
                 void run();
 
                 void do_accept();

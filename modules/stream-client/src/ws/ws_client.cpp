@@ -77,8 +77,6 @@ namespace stream_cloud {
                                 }
                         )
                 );
-
-
             }
 
             ws_client::~ws_client() = default;

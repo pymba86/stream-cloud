@@ -18,6 +18,7 @@ list(APPEND HEADER_FILES
         src/websocket.hpp
         src/json-rpc.hpp
         src/task.hpp
+        src/error.hpp
         )
 
 list(APPEND HEADER_JSON_FILES
@@ -41,6 +42,7 @@ list(APPEND SOURCE_FILES
         src/http.cpp
         src/websocket.cpp
         src/json-rpc.cpp
+        src/error.cpp
         )
 
 add_library(

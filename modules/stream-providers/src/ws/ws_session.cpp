@@ -1,11 +1,13 @@
 
 #include <websocket.hpp>
 #include "ws_session.hpp"
+#include "error.hpp"
 
 namespace stream_cloud {
     namespace providers {
         namespace ws_server {
             constexpr const char *dispatcher = "dispatcher";
+            constexpr const char *error = "error";
 
             void ws_session::on_write(boost::system::error_code ec, std::size_t bytes_transferred) {
                 boost::ignore_unused(bytes_transferred);
@@ -23,6 +25,12 @@ namespace stream_cloud {
                 }
             }
 
+            void ws_session::close()
+            {
+                boost::system::error_code ec;
+                ws_.close(boost::beast::websocket::close_code::normal, ec);
+            }
+
             void ws_session::on_read(boost::system::error_code ec, std::size_t bytes_transferred) {
                 boost::ignore_unused(bytes_transferred);
 
@@ -31,6 +39,15 @@ namespace stream_cloud {
                 }
 
                 if (ec) {
+                    auto *error_m = new api::error(id_);
+                    error_m->code = ec;
+                    pipe_->send(
+                            messaging::make_message(
+                                    pipe_,
+                                    error,
+                                    api::transport(error_m)
+                            )
+                    );
                     return;
                 }
 

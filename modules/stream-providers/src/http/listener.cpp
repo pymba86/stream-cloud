@@ -75,11 +75,10 @@ namespace stream_cloud {
                 do_accept();
             }
 
-            // FIXME Передача сообщения должна быть уникальна
             void listener::write(const intrusive_ptr<api::http>& ptr) {
                 auto &session = storage_session.at(ptr->id());
                 session->write(ptr);
-                storage_session.erase(ptr->id());
+                close(ptr);
             }
 
             void listener::close(const intrusive_ptr<api::http>& ptr) {

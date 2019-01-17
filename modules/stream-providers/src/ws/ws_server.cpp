@@ -49,6 +49,28 @@ namespace stream_cloud {
                         )
                 );
 
+                attach(
+                        behavior::make_handler(
+                                "close",
+                                [this](behavior::context& ctx) -> void {
+                                    auto t = ctx.message().body<api::transport>();
+                                    std::unique_ptr<api::web_socket> transport(static_cast<api::web_socket*>(t.release()));
+                                    pimpl->listener_->close(std::move(transport));
+                                }
+                        )
+                );
+
+                attach(
+                        behavior::make_handler(
+                                "remove",
+                                [this](behavior::context& ctx) -> void {
+                                    auto t = ctx.message().body<api::transport>();
+                                    std::unique_ptr<api::web_socket> transport(static_cast<api::web_socket*>(t.release()));
+                                    pimpl->listener_->remove(std::move(transport));
+                                }
+                        )
+                );
+
 
             }
 
