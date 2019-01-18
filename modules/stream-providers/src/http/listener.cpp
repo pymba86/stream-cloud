@@ -117,11 +117,13 @@ namespace stream_cloud {
 
                 http->body(req.body());
 
+                api::transport http_data(http);
+
                 pipe_->send(
                         messaging::make_message(
                                 pipe_,
                                 dispatcher,
-                                api::transport(http)
+                                std::move(http_data)
                         )
                 );
 

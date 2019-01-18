@@ -311,37 +311,30 @@ namespace stream_cloud {
                         auto key = task.request.params["key"].as<std::string>();
                         auto profile_login = task.storage["profile.login"];
 
-                        // Отправляем ответ
-                        auto ws_response = new api::web_socket(task.transport_id_);
-                        api::json_rpc::response_message response_message;
-                        response_message.id = task.request.id;
+                        try {
+                            pimpl->remove_reg_manager(key);
+                        } catch (exception &e) {
 
-                        if (pimpl->is_reg_manager_id(task.transport_id_)) {
-                            try {
-                                response_message.result = true;
-                                pimpl->remove_reg_manager(key);
-                                return;
-                            } catch (exception &e) {
-                                response_message.error = api::json_rpc::response_error(
-                                        api::json_rpc::error_code::unknown_error_code,
-                                        e.what());
-                            }
-                        } else {
+                            // Отправляем ответ
+                            auto ws_response = new api::web_socket(task.transport_id_);
+                            api::json_rpc::response_message response_message;
+                            response_message.id = task.request.id;
+
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
-                                    "transport id not equals! wft?");
+                                    e.what());
+
+                            ws_response->body = api::json_rpc::serialize(response_message);
+
+                            ctx->addresses("ws")->send(
+                                    messaging::make_message(
+                                            ctx->self(),
+                                            "write",
+                                            api::transport(ws_response)
+                                    )
+                            );
+
                         }
-
-                        ws_response->body = api::json_rpc::serialize(response_message);
-
-                        ctx->addresses("ws")->send(
-                                messaging::make_message(
-                                        ctx->self(),
-                                        "write",
-                                        api::transport(ws_response)
-                                )
-                        );
-
                     })
             );
 
@@ -402,7 +395,7 @@ namespace stream_cloud {
             attach(
                     behavior::make_handler("response", [this](behavior::context &ctx) -> void {
 
-                        auto transport = ctx.message().body<api::transport>();
+                        auto& transport = ctx.message().body<api::transport>();
 
                         auto *ws = static_cast<api::web_socket *>(transport.get());
 
@@ -410,7 +403,8 @@ namespace stream_cloud {
                         api::json::json_map message{api::json::data{ws->body}};
 
                         auto transports_id = message["metadata"]["transport"].as<api::transport_id>();
-                        message["metadata"].as<api::json::json_map>().clear();
+
+                        message.erase("metadata");
 
                         auto ws_response = new api::web_socket(transports_id);
                         ws_response->body = message.to_string();

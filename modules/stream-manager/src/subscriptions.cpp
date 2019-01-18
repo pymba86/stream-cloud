@@ -5,6 +5,12 @@
 #include "websocket.hpp"
 #include <unordered_set>
 
+#include <iostream>
+#include <vector>
+#include <numeric>
+#include <string>
+#include <functional>
+
 namespace stream_cloud {
 
     namespace manager {
@@ -215,6 +221,88 @@ namespace stream_cloud {
                         }
                     })
             );
+
+            attach(
+                    behavior::make_handler("groups", [this](behavior::context &ctx) -> void {
+                        // Проверка принадлежности пользователя к группе
+
+                        auto &task = ctx.message().body<api::task>();
+
+                        auto device_groups = task.request.metadata["device-groups"].as<api::json::json_array>();
+                        auto user_login = task.storage["user.login"];
+
+                        auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
+
+                        if (!device_groups.empty()) {
+
+                            try {
+
+                                // Число групп пользоватля с доступом к устройству
+                                int access_group_users = 0;
+                                std::vector<std::string> groups;
+
+                                for (auto const &group_key : device_groups) {
+                                    groups.emplace_back(group_key.as<std::string>());
+                                }
+
+                                pimpl->db_
+                                        << "select count(*) from subscriptions where user_login = ? and group_key in (?);"
+                                        << user_login
+                                        << std::accumulate(std::begin(groups), std::end(groups),
+                                                           string(),
+                                                           [](string &ss, string &s) {
+                                                               return ss.empty() ? s : ss + "," + s;
+                                                           })
+                                        >> access_group_users;
+
+                                task.request.metadata.erase("device-groups");
+
+                                if (access_group_users > 0) {
+
+                                    ctx->addresses("devices")->send(
+                                            messaging::make_message(
+                                                    ctx->self(),
+                                                    "request",
+                                                    std::move(task)
+                                            )
+                                    );
+
+                                    return;
+
+                                } else {
+                                    response_message.error = api::json_rpc::response_error(
+                                            api::json_rpc::error_code::unknown_error_code,
+                                            "access denied to device");
+                                }
+
+                            } catch (exception &e) {
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        e.what());
+                            }
+
+                        } else {
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "device-groups empty");
+                        }
+
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
+
+                        ctx->addresses("ws")->send(
+                                messaging::make_message(
+                                        ctx->self(),
+                                        "write",
+                                        api::transport(ws_response)
+                                )
+                        );
+
+                    })
+            );
+
         }
 
         void subscriptions::startup(config::config_context_t *) {

@@ -1,8 +1,23 @@
-//
-// Created by pymba86 on 18.01.19.
-//
+#pragma once
 
-#ifndef PROJECT_CONTROL_HPP
-#define PROJECT_CONTROL_HPP
+#include <abstract_service.hpp>
 
-#endif //PROJECT_CONTROL_HPP
+namespace stream_cloud {
+
+    namespace device {
+
+        class control: public config::abstract_service {
+        public:
+            explicit control(config::config_context_t *ctx);
+
+            ~control() = default;
+
+            void startup(config::config_context_t *) override;
+
+            void shutdown() override;
+        private:
+            class impl;
+            std::unique_ptr<impl> pimpl;
+        };
+    }
+}

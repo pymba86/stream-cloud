@@ -39,13 +39,14 @@ namespace stream_cloud {
 
                 if (ec) {
 
-                    auto *error_m = new api::error(id_);
+                    auto *error_m = new api::error(id_, api::transport_type::ws);
                     error_m->code = ec;
+                    api::transport ws_error(error_m);
                     main_pipe_->send(
                             messaging::make_message(
                                     main_pipe_,
                                     error,
-                                    api::transport(error_m)
+                                    std::move(ws_error)
                             )
                     );
 
@@ -54,11 +55,12 @@ namespace stream_cloud {
 
                 auto *ws = new api::web_socket(id_);
                 ws->body = boost::beast::buffers_to_string(buffer_.data());
+                api::transport ws_data(ws);
                 main_pipe_->send(
                         messaging::make_message(
                                 main_pipe_,
                                 dispatcher,
-                                api::transport(ws)
+                                std::move(ws_data)
                         )
                 );
 

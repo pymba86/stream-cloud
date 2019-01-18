@@ -42,19 +42,21 @@ void init_service(config::dynamic_environment &env) {
 
     // Сервисы
     auto &manager = env.add_service<device::manager>();
-   // auto &control = env.add_service<device::control>();
+    auto &control = env.add_service<device::control>();
 
 
     // Поставшики данных
     auto &client_provider = env.add_data_provider<client::ws_client::ws_client>(manager->entry_point());
 
     // Управление
-   // control->add_shared(client_provider.address().operator->());
+    control->add_shared(client_provider.address().operator->());
+
+    control->join(manager);
 
     // Менеджер
     manager->add_shared(client_provider.address().operator->());
 
-   // manager->join(router);
+    manager->join(control);
 
 }
 

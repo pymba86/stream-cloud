@@ -57,7 +57,7 @@ namespace stream_cloud {
                             "dispatcher",
                             [this](behavior::context &ctx) -> void {
 
-                                auto transport = ctx.message().body<api::transport>();
+                                auto &transport = ctx.message().body<api::transport>();
                                 auto transport_type = transport->type();
 
                                 if (transport_type == api::transport_type::ws) {
@@ -210,8 +210,18 @@ namespace stream_cloud {
 
                                     } else if (api::json_rpc::is_response(message)) {
                                         // Ответ от устройства
-                                        std::cout << "device: " << api::json::json_map{api::json::data{ws->body}}
-                                                  << std::endl;
+
+                                        auto ws_response = new api::web_socket(ws->id());
+                                        ws_response->body = message.to_string();
+
+                                        // Отправляем сообщение от менеджера
+                                        ctx->addresses("devices")->send(
+                                                messaging::make_message(
+                                                        ctx->self(),
+                                                        "response",
+                                                        api::transport(ws_response)
+                                                )
+                                        );
                                     }
                                 } else if (transport_type == api::transport_type::http) {
                                     // Проверяем на trusted_url
@@ -330,7 +340,7 @@ namespace stream_cloud {
                     behavior::make_handler("error", [this](behavior::context &ctx) -> void {
                         // Обработка ошибок
 
-                        auto transport = ctx.message().body<api::transport>();
+                        auto& transport = ctx.message().body<api::transport>();
                         auto transport_type = transport->type();
 
                         if (transport_type == api::transport_type::ws) {

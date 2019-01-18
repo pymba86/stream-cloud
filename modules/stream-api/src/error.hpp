@@ -8,7 +8,7 @@
 namespace stream_cloud {
     namespace api {
         struct error final  : public  transport_base {
-            error(transport_id);
+            error(transport_id, transport_type);
             virtual ~error();
             boost::system::error_code code;
 

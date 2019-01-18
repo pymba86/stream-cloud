@@ -25,7 +25,13 @@ namespace stream_cloud {
 
             if (!local_queue.empty()) {
                 tmp = std::move(local_queue.front());
-                local_queue.pop_front();
+
+                if (tmp) {
+                    local_queue.pop_front();
+                } else {
+                    tmp = message();
+                }
+
             }
 
             return tmp;

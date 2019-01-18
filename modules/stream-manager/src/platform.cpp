@@ -3,6 +3,7 @@
 #include <utility>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/cxx11/any_of.hpp>
+#include  <boost/beast/websocket/error.hpp>
 
 #include "platform.hpp"
 #include "error.hpp"
@@ -44,7 +45,7 @@ namespace stream_cloud {
                     behavior::make_handler("dispatcher", [this](behavior::context &ctx) -> void {
                         // Ответ от платформы
 
-                        auto transport = ctx.message().body<api::transport>();
+                        auto& transport = ctx.message().body<api::transport>();
                         auto transport_type = transport->type();
 
                         auto *ws = static_cast<api::web_socket *>(transport.get());
@@ -160,7 +161,7 @@ namespace stream_cloud {
                     behavior::make_handler("error", [this](behavior::context &ctx) -> void {
                         // Обработка ошибок
 
-                        auto transport = ctx.message().body<api::transport>();
+                        auto &transport = ctx.message().body<api::transport>();
                         auto transport_type = transport->type();
 
                         if (transport_type == api::transport_type::ws) {
@@ -169,7 +170,8 @@ namespace stream_cloud {
 
                             if (error->code == boost::asio::error::connection_reset
                                 || error->code == boost::asio::error::not_connected
-                                || error->code == boost::asio::error::eof) {
+                                || error->code == boost::asio::error::eof
+                                || error->code == boost::beast::websocket::error::closed) {
                                 // Соединение сброшено на другой стороне
 
                                 std::cout << "manager disconnect from platform" << std::endl;
@@ -196,7 +198,7 @@ namespace stream_cloud {
                     behavior::make_handler("write", [this](behavior::context &ctx) -> void {
                         // Обработчик после отправки сообщения
 
-                        auto transport = ctx.message().body<api::transport>();
+                        auto &transport = ctx.message().body<api::transport>();
                         auto transport_type = transport->type();
 
                         if (transport_type == api::transport_type::ws) {

@@ -20,6 +20,7 @@
 #include <task.hpp>
 #include <json-rpc.hpp>
 #include <context.hpp>
+#include  <boost/beast/websocket/error.hpp>
 
 namespace stream_cloud {
     namespace device {
@@ -32,6 +33,10 @@ namespace stream_cloud {
                       profile_key(std::move(profile_key)) {};
 
             ~impl() = default;
+
+            std::vector<std::string> get_service_list() const {
+                return {"control"};
+            }
 
             const std::string device_key;
             const std::string manager_key;
@@ -46,7 +51,7 @@ namespace stream_cloud {
                     behavior::make_handler("dispatcher", [this](behavior::context &ctx) -> void {
                         // Ответ от платформы
 
-                        auto transport = ctx.message().body<api::transport>();
+                        auto &transport = ctx.message().body<api::transport>();
                         auto transport_type = transport->type();
 
                         auto *ws = static_cast<api::web_socket *>(transport.get());
@@ -56,28 +61,88 @@ namespace stream_cloud {
 
                             if (api::json_rpc::is_request(message)) {
 
+                                auto id = message["metadata"]["transport"].as<api::transport_id>();
+                                auto *ws_manager = new api::web_socket(id);
 
-                                api::task task_;
-                                task_.transport_id_ = ws->id();
-                                api::json_rpc::parse(message, task_.request);
 
-                                if (api::json_rpc::contains(task_.request.metadata,
+                                api::task task;
+                                task.transport_id_ = id;
+                                api::json_rpc::parse(message, task.request);
+
+                                if (api::json_rpc::contains(task.request.metadata,
                                                             "transport")) {
+
                                     // Обрабатываем сообщение от платформы
+                                    std::vector<std::string> dispatcher;
+                                    boost::algorithm::split(dispatcher, task.request.method,
+                                                            boost::is_any_of("."));
 
-                                    auto id = message["metadata"]["transport"].as<api::transport_id>();
-                                    auto *ws_platform = new api::web_socket(id);
-                                    ws_platform->body = message.to_string();
+                                    if (dispatcher.size() > 1) {
 
-                                    ctx->addresses("control")->send(
-                                            messaging::make_message(
-                                                    ctx->self(),
-                                                    "название метода",
-                                                    api::transport(ws_platform)
-                                            )
-                                    );
+                                        const auto service_name = dispatcher.at(0);
+                                        const auto method_name = dispatcher.at(1);
 
-                                } else if (task_.request.method == "disconnect") {
+
+                                        if (boost::algorithm::any_of_equal(pimpl->get_service_list(),
+                                                                           service_name)) {
+
+                                            auto service = ctx->addresses(service_name);
+
+                                            if (service->message_types().count(method_name)) {
+
+                                                service->send(
+                                                        messaging::make_message(
+                                                                ctx->self(),
+                                                                method_name,
+                                                                std::move(task)
+                                                        ));
+
+
+                                            } else {
+
+                                                api::json_rpc::response_message response_message;
+                                                response_message.id = task.request.id;
+
+                                                response_message.error = api::json_rpc::response_error(
+                                                        api::json_rpc::error_code::unknown_error_code,
+                                                        "method not found");
+
+                                                ws->body = api::json_rpc::serialize(response_message);
+
+                                                ctx->addresses("ws")->send(
+                                                        messaging::make_message(
+                                                                ctx->self(),
+                                                                "write",
+                                                                api::transport(ws_manager)
+                                                        )
+                                                );
+                                            }
+                                        } else {
+
+                                            api::json_rpc::response_message response_message;
+                                            response_message.id = task.request.id;
+
+                                            response_message.error = api::json_rpc::response_error(
+                                                    api::json_rpc::error_code::unknown_error_code,
+                                                    "service not found");
+
+                                            ws_manager->body = api::json_rpc::serialize(response_message);
+
+                                            ctx->addresses("ws")->send(
+                                                    messaging::make_message(
+                                                            ctx->self(),
+                                                            "write",
+                                                            api::transport(ws_manager)
+                                                    )
+                                            );
+                                        }
+
+                                    } else {
+                                        std::cout << "not specified correctly method" << std::endl;
+                                    }
+
+
+                                } else if (task.request.method == "disconnect") {
 
                                     // Отключаемся от платформы
                                     ctx->addresses("client")->send(
@@ -112,11 +177,11 @@ namespace stream_cloud {
                                 api::json_rpc::request_message request_message;
                                 request_message.id = "0";
                                 request_message.method = "devices.disconnect";
-                                request_message.params = api::json::json_map{{"key", pimpl->manager_key}};
+                                request_message.params = api::json::json_map{{"key", pimpl->device_key}};
                                 request_message.metadata = api::json::json_map{
-                                    {"manager-key", pimpl->manager_key},
-                                    {"user-key", pimpl->profile_key},
-                                    };
+                                        {"manager-key", pimpl->manager_key},
+                                        {"user-key",    pimpl->profile_key},
+                                };
 
                                 ctx->addresses("client")->send(
                                         messaging::make_message(
@@ -144,8 +209,8 @@ namespace stream_cloud {
                         request_message.method = "devices.connect";
                         request_message.params = api::json::json_map{
                                 {"key",       pimpl->device_key},
-                                {"actions",   api::json::json_array{"on", "off"}},
-                                {"variables", api::json::json_array{"status"}},
+                                {"actions",   api::json::json_array{"control.on", "control.off"}},
+                                {"variables", api::json::json_array{"control.status"}},
                         };
 
                         request_message.metadata = api::json::json_map{
@@ -171,7 +236,7 @@ namespace stream_cloud {
                     behavior::make_handler("error", [this](behavior::context &ctx) -> void {
                         // Обработка ошибок
 
-                        auto transport = ctx.message().body<api::transport>();
+                        auto &transport = ctx.message().body<api::transport>();
                         auto transport_type = transport->type();
 
                         if (transport_type == api::transport_type::ws) {
@@ -180,7 +245,8 @@ namespace stream_cloud {
 
                             if (error->code == boost::asio::error::connection_reset
                                 || error->code == boost::asio::error::not_connected
-                                || error->code == boost::asio::error::eof) {
+                                || error->code == boost::asio::error::eof
+                                   || error->code == boost::beast::websocket::error::closed) {
                                 // Соединение сброшено на другой стороне
 
                                 std::cout << "device disconnect from manager" << std::endl;
@@ -199,6 +265,46 @@ namespace stream_cloud {
                                         )
                                 );
                             }
+                        }
+                    })
+            );
+
+
+            attach(
+                    behavior::make_handler("write", [this](behavior::context &ctx) -> void {
+                        // Обработчик после отправки сообщения
+
+                        auto &transport = ctx.message().body<api::transport>();
+                        auto transport_type = transport->type();
+
+                        if (transport_type == api::transport_type::ws) {
+
+                            auto *ws = static_cast<api::web_socket *>(transport.get());
+
+                            api::json::json_map message{api::json::data{ws->body}};
+
+                            api::json::json_map metadata;
+
+                            if (api::json_rpc::contains(message, "metadata")) {
+                                metadata = message["metadata"].as<api::json::json_map>();
+                            }
+
+                            metadata["transport"] = ws->id();
+
+                            message["metadata"] = metadata;
+
+
+                            auto ws_response = new api::web_socket(ws->id());
+                            ws_response->body = message.to_string();
+
+                            ctx->addresses("client")->send(
+                                    messaging::make_message(
+                                            ctx->self(),
+                                            "write",
+                                            api::transport(ws_response)
+                                    )
+                            );
+
                         }
                     })
             );

@@ -196,8 +196,7 @@ namespace stream_cloud {
 
                                 pimpl->db_ << "select device_key from connections where group_key in (?);"
                                            << std::accumulate(std::begin(groups), std::end(groups), string(),
-                                                              [](string &ss, string &s)
-                                                              {
+                                                              [](string &ss, string &s) {
                                                                   return ss.empty() ? s : ss + "," + s;
                                                               })
                                            >> [&](unique_ptr<string> device_key_p) {
@@ -229,6 +228,67 @@ namespace stream_cloud {
                                         api::transport(ws_response)
                                 )
                         );
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("devices", [this](behavior::context &ctx) -> void {
+                        // Получить список групп по device-key
+
+                        auto &task = ctx.message().body<api::task>();
+
+                        auto device_key = task.request.metadata["device-key"].as<std::string>();
+
+                        auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
+
+
+                        if (!device_key.empty()) {
+
+                            try {
+                                api::json::json_array groups_list;
+
+                                pimpl->db_ << "select group_key from connections where device_key = ?;"
+                                           << device_key
+                                           >> [&](std::string group_key) {
+                                               groups_list.push_back(group_key);
+                                           };
+
+                                task.request.metadata["device-groups"] = groups_list;
+
+                                ctx->addresses("subscriptions")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "groups",
+                                                std::move(task)
+                                        )
+                                );
+
+                                return;
+
+                            } catch (exception &e) {
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        e.what());
+                            }
+                        } else {
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "device-key empty");
+                        }
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
+
+                        ctx->addresses("ws")->send(
+                                messaging::make_message(
+                                        ctx->self(),
+                                        "write",
+                                        api::transport(ws_response)
+                                )
+                        );
+
+
                     })
             );
         }

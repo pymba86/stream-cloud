@@ -39,18 +39,15 @@ namespace stream_cloud {
             void ws_session::on_read(boost::system::error_code ec, std::size_t bytes_transferred) {
                 boost::ignore_unused(bytes_transferred);
 
-                if (ec == websocket::error::closed) {
-                    return;
-                }
-
                 if (ec) {
-                    auto *error_m = new api::error(id_);
+                    auto *error_m = new api::error(id_, api::transport_type::ws);
                     error_m->code = ec;
+                    api::transport ws_error(error_m);
                     pipe_->send(
                             messaging::make_message(
                                     pipe_,
                                     error,
-                                    api::transport(error_m)
+                                    std::move(ws_error)
                             )
                     );
                     return;
@@ -58,11 +55,12 @@ namespace stream_cloud {
 
                 auto *ws = new api::web_socket(id_);
                 ws->body = boost::beast::buffers_to_string(buffer_.data());
+                api::transport ws_data(ws);
                 pipe_->send(
                         messaging::make_message(
                                 pipe_,
                                 dispatcher,
-                                api::transport(ws)
+                                std::move(ws_data)
                         )
                 );
 
