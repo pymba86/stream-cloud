@@ -9,10 +9,12 @@ namespace stream_cloud {
     namespace config {
 
         struct dynamic_environment::impl final {
-            impl() :
-                    coordinator_(new executor::coordinator<executor::work_sharing>(4, 1000)),
+            impl(configuration &config, size_t num_worker_threads, size_t max_throughput_param_worker) :
+                    coordinator_(new executor::coordinator<executor::work_sharing>(num_worker_threads,
+                                                                                   max_throughput_param_worker)),
                     io_serv(new boost::asio::io_service),
-                    background_(new boost::thread_group) {
+                    background_(new boost::thread_group),
+                    configuration_(config) {
             }
 
             ~impl() = default;
@@ -86,9 +88,19 @@ namespace stream_cloud {
 
         }
 
-        dynamic_environment::dynamic_environment(configuration &&config) : pimpl(new impl) {
+        dynamic_environment::dynamic_environment(configuration &&config) {
 
-            pimpl->configuration_ = config;
+            auto num_worker_threads = config.dynamic_configuration["num_worker_threads"].as<long>();
+            auto max_throughput_worker = config.dynamic_configuration["max_throughput_param_worker"].as<long>();
+
+            // load default system settings
+            if (num_worker_threads < 0 || max_throughput_worker < 0) {
+                std::cerr << "num_worker_threads and max_throughput_param_worker less than zero" << std::endl;
+                num_worker_threads = 0;
+                max_throughput_worker = 1000;
+            }
+
+            pimpl = std::make_unique<impl>(config, num_worker_threads, max_throughput_worker);
 
             std::shared_ptr<boost::asio::signal_set> sigint_set(
                     new boost::asio::signal_set(main_loop(), SIGINT, SIGTERM));

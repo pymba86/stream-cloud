@@ -1,5 +1,7 @@
 {
   "http-port": "8090",
+  "num_worker_threads": 4,
+  "max_throughput_param_worker": 1000,
   "ws-port": "8091",
   "profile-key": "pymba86.123",
   "manager-key": "pymba86.home",

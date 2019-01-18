@@ -15,6 +15,8 @@ namespace stream_cloud {
             std::cout << "Load default config" << std::endl;
             config.dynamic_configuration = api::json::json_map{
                     {"http-port", "8080"},
+                    {"num_worker_threads", 0},
+                    {"max_throughput_param_worker", 1000},
                     {"ws-port",   "8081"},
                     {"profile-key",   ""},
                     {"manager-key",   ""},
