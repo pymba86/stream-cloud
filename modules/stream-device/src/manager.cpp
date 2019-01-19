@@ -290,6 +290,7 @@ namespace stream_cloud {
                             }
 
                             metadata["transport"] = ws->id();
+                            metadata["device-key"] = pimpl->device_key;
 
                             message["metadata"] = metadata;
 

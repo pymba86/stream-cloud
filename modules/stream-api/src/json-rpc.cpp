@@ -136,6 +136,10 @@ namespace stream_cloud {
                     obj["params"] = msg.params;
                 }
 
+                if (!msg.metadata.empty()) {
+                    obj["metadata"] = msg.metadata;
+                }
+
                 return obj.to_string();
             }
         }

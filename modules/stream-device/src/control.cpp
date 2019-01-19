@@ -47,6 +47,22 @@ namespace stream_cloud {
                                         api::transport(ws_response)
                                 )
                         );
+
+                        // Отправляем уведомление о изменении значения control.status
+                        auto ws_notify = new api::web_socket(task.transport_id_);
+
+                        api::json_rpc::notify_message notify_message;
+                        notify_message.method = "control.status";
+                        notify_message.params =  pimpl->status;
+
+                        ws_notify->body = api::json_rpc::serialize(notify_message);
+                        ctx->addresses("manager")->send(
+                                messaging::make_message(
+                                        ctx->self(),
+                                        "write",
+                                        api::transport(ws_notify)
+                                )
+                        );
                     })
             );
 

@@ -481,7 +481,6 @@ namespace stream_cloud {
                     behavior::make_handler("request", [this](behavior::context &ctx) -> void {
                         // Отправка команды на устройство
 
-
                         auto &task = ctx.message().body<api::task>();
 
                         auto device_key = task.request.metadata["device-key"].as<std::string>();
@@ -537,6 +536,7 @@ namespace stream_cloud {
 
             attach(
                     behavior::make_handler("response", [this](behavior::context &ctx) -> void {
+                        // Получение ответа от устройства
 
                         auto &transport = ctx.message().body<api::transport>();
 
@@ -546,46 +546,52 @@ namespace stream_cloud {
                         api::json::json_map message{api::json::data{ws->body}};
 
                         auto transports_id = message["metadata"]["transport"].as<api::transport_id>();
+                        auto device_key = message["metadata"]["device-key"].as<std::string>();
 
-                        message.erase("metadata");
+                        if (pimpl->is_reg_device(device_key)) {
 
-                        auto ws_response = new api::web_socket(transports_id);
-                        ws_response->body = message.to_string();
+                            message.erase("metadata");
 
-                        ctx->addresses("ws")->send(
-                                messaging::make_message(
-                                        ctx->self(),
-                                        "write",
-                                        api::transport(ws_response)
-                                )
-                        );
+                            auto ws_response = new api::web_socket(transports_id);
+                            ws_response->body = message.to_string();
+
+                            ctx->addresses("ws")->send(
+                                    messaging::make_message(
+                                            ctx->self(),
+                                            "write",
+                                            api::transport(ws_response)
+                                    )
+                            );
+                        }
                     })
             );
 
             attach(
                     behavior::make_handler("notify", [this](behavior::context &ctx) -> void {
+                        // Получение уведомления от устройства
 
                         auto &transport = ctx.message().body<api::transport>();
 
                         auto *ws = static_cast<api::web_socket *>(transport.get());
 
-                        // Отправляем ответ от проверенного менеджера клиенту
                         api::json::json_map message{api::json::data{ws->body}};
 
                         auto transports_id = message["metadata"]["transport"].as<api::transport_id>();
+                        auto device_key = message["metadata"]["device-key"].as<std::string>();
 
-                        message.erase("metadata");
+                        if (pimpl->is_reg_device(device_key)) {
 
-                        auto ws_response = new api::web_socket(transports_id);
-                        ws_response->body = message.to_string();
+                            auto ws_notify = new api::web_socket(transports_id);
+                            ws_notify->body = message.to_string();
 
-                        ctx->addresses("ws")->send(
-                                messaging::make_message(
-                                        ctx->self(),
-                                        "write",
-                                        api::transport(ws_response)
-                                )
-                        );
+                            ctx->addresses("subscriptions")->send(
+                                    messaging::make_message(
+                                            ctx->self(),
+                                            "emit",
+                                            api::transport(ws_notify)
+                                    )
+                            );
+                        }
                     })
             );
 

@@ -23,7 +23,38 @@ namespace stream_cloud {
 
             ~impl() = default;
 
+            bool is_reg_subscribe(const std::string &user_login) const {
+                return users_subscribe_reg.find(user_login) != users_subscribe_reg.end();
+            }
+
+            bool is_reg_subscribe_id(const api::transport_id id) const {
+
+                auto it = std::find_if(std::begin(users_subscribe_reg), std::end(users_subscribe_reg), [&](auto &&p) {
+                    return p.second == id;
+                });
+
+                return it != std::end(users_subscribe_reg);
+            }
+
+            void add_reg_subscribe(const std::string &user_login,
+                                api::transport_id transport_id) {
+                users_subscribe_reg.emplace(user_login, transport_id);
+            }
+
+            void remove_reg_subscribe(const std::string &device_key) {
+                users_subscribe_reg.erase(device_key);
+            }
+
+            api::transport_id get_subscribe_transport_id(const std::string &key) const {
+                return users_subscribe_reg.at(key);
+            }
+
             sqlite::database db_;
+
+        private:
+            // Список активных пользователей
+            // Необходим для меньших запросов к базе данных (кэш)
+            std::unordered_map<std::string, api::transport_id> users_subscribe_reg;
         };
 
         subscriptions::subscriptions(config::config_context_t *ctx) : abstract_service(ctx, "subscriptions") {
@@ -299,6 +330,112 @@ namespace stream_cloud {
                                         api::transport(ws_response)
                                 )
                         );
+
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("connect", [this](behavior::context &ctx) -> void {
+                        // Пользователь подключился для получения уведомлений
+
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("disconnect", [this](behavior::context &ctx) -> void {
+                        // Пользователь отключился - он больше не будет получать уведомления
+
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("on", [this](behavior::context &ctx) -> void {
+                        // Проверка на подключение
+                        // Добавление устройства к пользователю
+
+                        auto &task = ctx.message().body<api::task>();
+
+                        auto device_groups = task.request.metadata["device-groups"].as<api::json::json_array>();
+                        auto user_login = task.storage["user.login"];
+
+                        auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
+
+                        if (!device_groups.empty()) {
+
+                            try {
+
+                                std::vector<std::string> user_groups;
+                                std::vector<std::string> groups;
+
+                                for (auto const &group_key : device_groups) {
+                                    groups.emplace_back(group_key.as<std::string>());
+                                }
+
+                                pimpl->db_
+                                        << "select group_key from subscriptions where user_login = ? and group_key in (?);"
+                                        << user_login
+                                        << std::accumulate(std::begin(groups), std::end(groups),
+                                                           string(),
+                                                           [](string &ss, string &s) {
+                                                               return ss.empty() ? s : ss + "," + s;
+                                                           })
+                                        >> user_groups;
+
+                                task.request.metadata.erase("device-groups");
+
+                                if (user_groups.empty()) {
+
+                                    response_message.error = api::json_rpc::response_error(
+                                            api::json_rpc::error_code::unknown_error_code,
+                                            "access denied to device");
+
+                                } else {
+
+                                    // Проверка на подключение
+                                    // Добавление устройства к пользователю
+
+                                    return;
+                                }
+
+                            } catch (exception &e) {
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        e.what());
+                            }
+
+                        } else {
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "device-groups empty");
+                        }
+
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
+
+                        ctx->addresses("ws")->send(
+                                messaging::make_message(
+                                        ctx->self(),
+                                        "write",
+                                        api::transport(ws_response)
+                                )
+                        );
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("off", [this](behavior::context &ctx) -> void {
+                        // Проверка на подключение
+                        // Удаление устройства у пользователя
+                    })
+            );
+
+
+            attach(
+                    behavior::make_handler("emit", [this](behavior::context &ctx) -> void {
+                        // Отправка уведомления пользователям от устройства
+
 
                     })
             );

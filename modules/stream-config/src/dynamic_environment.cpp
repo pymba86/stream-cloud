@@ -95,7 +95,6 @@ namespace stream_cloud {
 
             // load default system settings
             if (num_worker_threads < 0 || max_throughput_worker < 0) {
-                std::cerr << "num_worker_threads and max_throughput_param_worker less than zero" << std::endl;
                 num_worker_threads = 0;
                 max_throughput_worker = 1000;
             }

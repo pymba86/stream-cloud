@@ -96,6 +96,7 @@ namespace stream_cloud {
             auto listener::check_url(const std::string &url) const -> bool {
                 ///TODO: not fast
                 auto start = url.begin();
+               // trusted_url.find(url) != trusted_url.end();
                 ++start;
                 return (trusted_url.find(std::string(start,url.end()))!=trusted_url.end());
             }

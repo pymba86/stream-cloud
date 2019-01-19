@@ -100,6 +100,8 @@ namespace stream_cloud {
             };
 
 
+            // Использовать для передачи в обработчик в место api::task
+            // Проверка, указание типа - Убирает лишние проверки is_request, is_notify, is_response
             class context final {
             public:
                 context() : type_(type::non) {}
@@ -153,7 +155,6 @@ namespace stream_cloud {
                 json::json_value data;
             };
 
-            ///Experimental }
 
             bool parse(const json::json_map &message, request_message &request);
 

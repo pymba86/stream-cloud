@@ -291,6 +291,84 @@ namespace stream_cloud {
 
                     })
             );
+
+            attach(
+                    behavior::make_handler("subscribe", [this](behavior::context &ctx) -> void {
+                        // Подписаться на получение уведомлений от устройства
+
+                        auto &task = ctx.message().body<api::task>();
+
+                        auto device_key = task.request.params["device-key"].as<std::string>();
+
+                        auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
+
+
+                        if (!device_key.empty()) {
+
+                            try {
+                                api::json::json_array groups_list;
+
+                                pimpl->db_ << "select group_key from connections where device_key = ?;"
+                                           << device_key
+                                           >> [&](std::string group_key) {
+                                               groups_list.push_back(group_key);
+                                           };
+
+                                task.request.metadata["device-groups"] = groups_list;
+
+                                ctx->addresses("subscriptions")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "on",
+                                                std::move(task)
+                                        )
+                                );
+
+                                return;
+
+                            } catch (exception &e) {
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        e.what());
+                            }
+                        } else {
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "device-key empty");
+                        }
+
+                        ws_response->body = api::json_rpc::serialize(response_message);
+
+                        ctx->addresses("ws")->send(
+                                messaging::make_message(
+                                        ctx->self(),
+                                        "write",
+                                        api::transport(ws_response)
+                                )
+                        );
+
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("unsubscribe", [this](behavior::context &ctx) -> void {
+                        // Отписать на получение уведомлений от устройства
+
+                        auto &task = ctx.message().body<api::task>();
+
+                        auto device_key = task.request.params["device-key"].as<std::string>();
+
+                        ctx->addresses("subscriptions")->send(
+                                messaging::make_message(
+                                        ctx->self(),
+                                        "off",
+                                        std::move(task)
+                                )
+                        );
+                    })
+            );
         }
 
         void connections::startup(config::config_context_t *) {

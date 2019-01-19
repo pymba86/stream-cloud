@@ -1,7 +1,7 @@
 #include <utility>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/cxx11/any_of.hpp>
-
+#include  <boost/beast/websocket/error.hpp>
 #include <router.hpp>
 
 #include <unordered_map>
@@ -266,7 +266,8 @@ namespace stream_cloud {
                             auto *error = static_cast<api::error *>(transport.get());
 
                             if (error->code == boost::asio::error::connection_reset
-                                || error->code == boost::asio::error::not_connected) {
+                                || error->code == boost::asio::error::not_connected
+                                   || error->code == boost::beast::websocket::error::closed) {
                                 // Соединение сброшено на другой стороне
 
                                 auto ws_response = new api::web_socket(error->id());
