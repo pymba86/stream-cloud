@@ -46,21 +46,24 @@ namespace stream_cloud {
                             messaging::make_message(
                                     main_pipe_,
                                     error,
-                                    std::move(ws_error)
+                                    api::transport(ws_error)
                             )
                     );
 
                     return;
                 }
 
-                auto *ws = new api::web_socket(id_);
+                auto ws = new api::web_socket(id_);
                 ws->body = boost::beast::buffers_to_string(buffer_.data());
+
+                std::cout << "ws_session_server: " << ws->body << std::endl;
+
                 api::transport ws_data(ws);
                 main_pipe_->send(
                         messaging::make_message(
                                 main_pipe_,
                                 dispatcher,
-                                std::move(ws_data)
+                                api::transport(ws_data)
                         )
                 );
 
@@ -122,7 +125,7 @@ namespace stream_cloud {
 
             void ws_session::write(const intrusive_ptr<api::web_socket> &ptr) {
 
-                queue_(ptr->body);
+                queue_(std::make_shared<std::string const>(ptr->body));
             }
 
             api::transport_id ws_session::id() const {
@@ -130,7 +133,7 @@ namespace stream_cloud {
             }
 
             void ws_session::write(const std::string &value) {
-                queue_(value);
+                queue_(std::make_shared<std::string const>(value));
             };
 
             bool ws_session::queue::on_write() {

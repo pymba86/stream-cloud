@@ -50,6 +50,7 @@ set(HEADER_FILES
         src/actor/local_actor.hpp
         src/actor/blocking_actor.hpp
         src/actor/async_actor.hpp
+        src/queue.hpp
         )
 
 set(SOURCE_FILES

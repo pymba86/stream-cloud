@@ -42,7 +42,7 @@ namespace stream_cloud {
                 return *this;
             }
 
-            any &operator=(any &&rhs)noexcept {
+            any &operator=(any &&rhs) noexcept {
                 rhs.swap(*this);
                 any().swap(rhs);
                 return *this;
@@ -63,12 +63,12 @@ namespace stream_cloud {
             }
 
             template<typename T>
-            auto as() -> T& {
+            auto as() -> T & {
                 return static_cast<holder <T> *>(content)->held;
             }
 
             template<typename T>
-            auto as() const -> const T& {
+            auto as() const -> const T & {
                 return static_cast<holder <T> *>(content)->held;
             }
 
@@ -90,16 +90,17 @@ namespace stream_cloud {
                 holder(ValueType &&value) : held(std::move(value)) {
                 }
 
-                placeholder *clone() const override  {
+                placeholder *clone() const override {
                     return new holder(held);
                 }
 
                 ValueType held;
 
-                ~holder() override  = default;
+                ~holder() override = default;
 
                 holder &operator=(const holder &) = delete;
             };
+
         private:
             placeholder *content;
         };

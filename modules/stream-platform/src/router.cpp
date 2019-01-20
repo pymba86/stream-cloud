@@ -172,6 +172,19 @@ namespace stream_cloud {
                                                         api::transport(ws_response)
                                                 )
                                         );
+                                    } else if (api::json_rpc::is_notify(message)) {
+
+                                        auto ws_notify = new api::web_socket(ws->id());
+                                        ws_notify->body = message.to_string();
+
+                                        // Отправляем сообщение от менеджера
+                                        ctx->addresses("managers")->send(
+                                                messaging::make_message(
+                                                        ctx->self(),
+                                                        "response",
+                                                        api::transport(ws_notify)
+                                                )
+                                        );
                                     }
                                 } else if (transport_type == api::transport_type::http) {
                                     // Проверяем на trusted_url

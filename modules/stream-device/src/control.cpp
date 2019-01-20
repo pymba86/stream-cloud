@@ -32,7 +32,7 @@ namespace stream_cloud {
                         std::cout << "status: on" << std::endl;
 
                         // Отправляем ответ
-                        auto ws_response = new api::web_socket(task.transport_id_);
+                        auto* ws_response = new api::web_socket(task.transport_id_);
                         api::json_rpc::response_message response_message;
                         response_message.id = task.request.id;
 
@@ -40,29 +40,37 @@ namespace stream_cloud {
 
                         ws_response->body = api::json_rpc::serialize(response_message);
 
+                        api::transport ws_res(ws_response);
+
                         ctx->addresses("manager")->send(
                                 messaging::make_message(
                                         ctx->self(),
                                         "write",
-                                        api::transport(ws_response)
+                                        api::transport(ws_res)
                                 )
                         );
 
+
                         // Отправляем уведомление о изменении значения control.status
-                        auto ws_notify = new api::web_socket(task.transport_id_);
+                       /* auto* ws_notify = new api::web_socket(task.transport_id_);
 
                         api::json_rpc::notify_message notify_message;
                         notify_message.method = "control.status";
-                        notify_message.params =  pimpl->status;
+                        notify_message.params =  true;
 
                         ws_notify->body = api::json_rpc::serialize(notify_message);
+
+                        api::transport ws_not(ws_notify);
+
                         ctx->addresses("manager")->send(
                                 messaging::make_message(
                                         ctx->self(),
                                         "write",
-                                        api::transport(ws_notify)
+                                        new api::web_socket(task.transport_id_)
                                 )
-                        );
+                        ); */
+
+
                     })
             );
 
@@ -85,11 +93,13 @@ namespace stream_cloud {
 
                         ws_response->body = api::json_rpc::serialize(response_message);
 
+                        api::transport ws_res(ws_response);
+
                         ctx->addresses("manager")->send(
                                 messaging::make_message(
                                         ctx->self(),
                                         "write",
-                                        api::transport(ws_response)
+                                        std::move(ws_res)
                                 )
                         );
 
@@ -111,11 +121,13 @@ namespace stream_cloud {
 
                         ws_response->body = api::json_rpc::serialize(response_message);
 
+                        api::transport ws_res(ws_response);
+
                         ctx->addresses("manager")->send(
                                 messaging::make_message(
                                         ctx->self(),
                                         "write",
-                                        api::transport(ws_response)
+                                        std::move(ws_res)
                                 )
                         );
                     })

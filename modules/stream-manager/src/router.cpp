@@ -38,7 +38,8 @@ namespace stream_cloud {
             }
 
             std::vector<std::string> get_user_method_list() const {
-                return {"devices.list", "devices.control", "devices.detail"};
+                return {"devices.list", "devices.control", "devices.detail", "devices.subscribe",
+                        "devices.unsubscribe"};
             }
 
             ~impl() = default;
@@ -211,21 +212,31 @@ namespace stream_cloud {
                                     } else if (api::json_rpc::is_response(message)) {
                                         // Ответ от устройства
 
+                                        auto *ws_response = new api::web_socket(ws->id());
+                                        ws_response->body = message.to_string();
+
+                                        api::transport ws_res(ws_response);
+
                                         ctx->addresses("devices")->send(
                                                 messaging::make_message(
                                                         ctx->self(),
                                                         "response",
-                                                        api::transport(ws)
+                                                        api::transport(ws_res)
                                                 )
                                         );
-                                    } else if (api::json_rpc::is_response(message)) {
+                                    } else if (api::json_rpc::is_notify(message)) {
                                         // Уведомление от устройства
+
+                                        auto *ws_notify = new api::web_socket(ws->id());
+                                        ws_notify->body = message.to_string();
+
+                                        api::transport ws_not(ws_notify);
 
                                         ctx->addresses("devices")->send(
                                                 messaging::make_message(
                                                         ctx->self(),
                                                         "notify",
-                                                        api::transport(ws)
+                                                        api::transport(ws_not)
                                                 )
                                         );
                                     }
@@ -346,7 +357,7 @@ namespace stream_cloud {
                     behavior::make_handler("error", [this](behavior::context &ctx) -> void {
                         // Обработка ошибок
 
-                        auto& transport = ctx.message().body<api::transport>();
+                        auto &transport = ctx.message().body<api::transport>();
                         auto transport_type = transport->type();
 
                         if (transport_type == api::transport_type::ws) {
@@ -355,7 +366,7 @@ namespace stream_cloud {
 
                             if (error->code == boost::asio::error::connection_reset
                                 || error->code == boost::asio::error::not_connected
-                                   || error->code == boost::beast::websocket::error::closed) {
+                                || error->code == boost::beast::websocket::error::closed) {
                                 // Соединение сброшено на другой стороне
 
                                 auto ws_response = new api::web_socket(error->id());

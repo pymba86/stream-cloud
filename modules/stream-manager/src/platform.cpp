@@ -68,11 +68,15 @@ namespace stream_cloud {
                                     auto *ws_platform = new api::web_socket(id);
                                     ws_platform->body = message.to_string();
 
+                                    api::transport ws_dispatcher(ws_platform);
+
+                                    std::cout << "platform: " << message << std::endl;
+
                                     ctx->addresses("router")->send(
                                             messaging::make_message(
                                                     ctx->self(),
                                                     "dispatcher",
-                                                    api::transport(ws_platform)
+                                                    api::transport(ws_dispatcher)
                                             )
                                     );
 
@@ -213,7 +217,9 @@ namespace stream_cloud {
                                 metadata = message["metadata"].as<api::json::json_map>();
                             }
 
-                            metadata["transport"] = ws->id();
+                            if (!api::json_rpc::contains(message, "transport")) {
+                                metadata["transport"] = ws->id();
+                            }
 
                             message["metadata"] = metadata;
 

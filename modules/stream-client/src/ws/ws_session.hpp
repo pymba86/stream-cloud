@@ -1,3 +1,5 @@
+#include <utility>
+
 #pragma once
 
 #include <algorithm>
@@ -34,8 +36,8 @@ namespace stream_cloud {
             template<class NextLayer>
             inline void setup_stream(websocket::stream<NextLayer> &ws) {
                 websocket::permessage_deflate pmd;
-                pmd.client_enable = false;
-                pmd.server_enable = false;
+                pmd.client_enable = true;
+                pmd.server_enable = true;
                 pmd.compLevel = 3;
                 ws.set_option(pmd);
                 ws.auto_fragment(true);
@@ -59,7 +61,8 @@ namespace stream_cloud {
                     };
 
                     ws_session &self_;
-                    std::vector<std::unique_ptr<work>> items_;
+                    std::vector<std::shared_ptr<work>> items_;
+                    std::mutex mutex_;
 
                 public:
                     explicit queue(ws_session &self);
@@ -71,47 +74,67 @@ namespace stream_cloud {
                     // Returns `true` if the caller should initiate a read
                     bool on_write();
 
+                    void pop_front() {
+                        std::lock_guard<std::mutex> lock{mutex_};
+                        items_.erase(items_.begin());
+                    };
+
+                    std::shared_ptr<work>& front() {
+                        std::lock_guard<std::mutex> lock{mutex_};
+                        return items_.front();
+                    }
+
+                    bool empty() {
+                        std::lock_guard<std::mutex> lock{mutex_};
+                        return items_.empty();
+                    };
+
                     // Called by the HTTP handler to send a response.
-                    void operator()(const std::string &msg) {
+                    void operator()(std::shared_ptr<std::string const> const &msg) {
                         // This holds a work item
                         struct work_impl final : work {
                             ws_session &self_;
-                            const std::string msg_;
+                            std::shared_ptr<std::string const> msg_;
 
                             work_impl(
                                     ws_session &self,
-                                    std::string msg)
+                                    std::shared_ptr<std::string const> msg)
                                     : self_(self), msg_(std::move(msg)) {
                             }
 
                             void
                             operator()() { // self_.ws_.
                                 self_.ws_.async_write(
-                                        boost::asio::buffer(msg_),
-                                        std::bind(
-                                                &ws_session::on_write,
-                                                self_.shared_from_this(),
-                                                std::placeholders::_1,
-                                                std::placeholders::_2));
+                                        boost::asio::buffer(std::string(*msg_)),
+                                        [sp = self_.shared_from_this()](
+                                                boost::system::error_code ec, std::size_t bytes)
+                                        {
+                                            sp->on_write(ec, bytes);
+                                        });
                             }
                         };
 
+                        std::lock_guard<std::mutex> lock{mutex_};
+
                         // Allocate and store the work
-                        items_.push_back(boost::make_unique<work_impl>(self_, msg));
+                        items_.push_back(std::make_shared<work_impl>(self_, msg));
 
                         // If there was no previous work, start this one
-                        if (items_.size() == 1)
-                            (*items_.front())();
+                        if (items_.size() > 1)
+                            return;
+
+                        (*items_.front())();
+
                     }
                 };
 
             public:
-                explicit ws_session(boost::asio::io_context& ioc,
-                        api::transport_id id,
-                        actor::actor_address pipe_
+                explicit ws_session(boost::asio::io_context &ioc,
+                                    api::transport_id id,
+                                    actor::actor_address pipe_
                 );
 
-                void run(const std::string& host_, const std::string& text_);
+                void run(const std::string &host_, const std::string &text_);
 
                 void write(const intrusive_ptr<api::web_socket> &ptr);
 
@@ -140,7 +163,7 @@ namespace stream_cloud {
 
                 websocket::stream<tcp::socket> ws_;
                 tcp::resolver resolver_;
-                boost::beast::multi_buffer buffer_;
+                boost::beast::flat_buffer buffer_;
                 actor::actor_address pipe_;
                 queue queue_;
                 std::string host_;

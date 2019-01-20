@@ -1,6 +1,6 @@
 {
   "http-port": "8080",
-  "num_worker_threads": 4,
+  "num_worker_threads": 1,
   "max_throughput_param_worker": 1000,
   "ws-port": "8081",
   "profile-key": "",

@@ -239,11 +239,6 @@ namespace stream_cloud {
 
                         auto device_key = task.request.metadata["device-key"].as<std::string>();
 
-                        auto ws_response = new api::web_socket(task.transport_id_);
-                        api::json_rpc::response_message response_message;
-                        response_message.id = task.request.id;
-
-
                         if (!device_key.empty()) {
 
                             try {
@@ -255,40 +250,80 @@ namespace stream_cloud {
                                                groups_list.push_back(group_key);
                                            };
 
-                                task.request.metadata["device-groups"] = groups_list;
 
-                                ctx->addresses("subscriptions")->send(
-                                        messaging::make_message(
-                                                ctx->self(),
-                                                "groups",
-                                                std::move(task)
-                                        )
-                                );
+                                if (!groups_list.empty()) {
 
-                                return;
+                                    task.request.metadata["device-groups"] = groups_list;
+
+                                    ctx->addresses("subscriptions")->send(
+                                            messaging::make_message(
+                                                    ctx->self(),
+                                                    "groups",
+                                                    std::move(task)
+                                            )
+                                    );
+
+                                } else {
+
+                                    auto ws_response = new api::web_socket(task.transport_id_);
+                                    api::json_rpc::response_message response_message;
+                                    response_message.id = task.request.id;
+
+                                    response_message.error = api::json_rpc::response_error(
+                                            api::json_rpc::error_code::unknown_error_code,
+                                            "device groups empty");
+
+                                    ws_response->body = api::json_rpc::serialize(response_message);
+
+                                    ctx->addresses("ws")->send(
+                                            messaging::make_message(
+                                                    ctx->self(),
+                                                    "write",
+                                                    api::transport(ws_response)
+                                            )
+                                    );
+                                }
 
                             } catch (exception &e) {
+
+                                auto ws_response = new api::web_socket(task.transport_id_);
+                                api::json_rpc::response_message response_message;
+                                response_message.id = task.request.id;
+
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
+
+                                ws_response->body = api::json_rpc::serialize(response_message);
+
+                                ctx->addresses("ws")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "write",
+                                                api::transport(ws_response)
+                                        )
+                                );
                             }
                         } else {
+
+                            auto ws_response = new api::web_socket(task.transport_id_);
+                            api::json_rpc::response_message response_message;
+                            response_message.id = task.request.id;
+
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
                                     "device-key empty");
+
+                            ws_response->body = api::json_rpc::serialize(response_message);
+
+                            ctx->addresses("ws")->send(
+                                    messaging::make_message(
+                                            ctx->self(),
+                                            "write",
+                                            api::transport(ws_response)
+                                    )
+                            );
                         }
-
-                        ws_response->body = api::json_rpc::serialize(response_message);
-
-                        ctx->addresses("ws")->send(
-                                messaging::make_message(
-                                        ctx->self(),
-                                        "write",
-                                        api::transport(ws_response)
-                                )
-                        );
-
-
                     })
             );
 
@@ -300,11 +335,6 @@ namespace stream_cloud {
 
                         auto device_key = task.request.params["device-key"].as<std::string>();
 
-                        auto ws_response = new api::web_socket(task.transport_id_);
-                        api::json_rpc::response_message response_message;
-                        response_message.id = task.request.id;
-
-
                         if (!device_key.empty()) {
 
                             try {
@@ -316,12 +346,106 @@ namespace stream_cloud {
                                                groups_list.push_back(group_key);
                                            };
 
-                                task.request.metadata["device-groups"] = groups_list;
+                                if (!groups_list.empty()) {
+
+                                    task.request.metadata["device-groups"] = groups_list;
+
+                                    ctx->addresses("subscriptions")->send(
+                                            messaging::make_message(
+                                                    ctx->self(),
+                                                    "on",
+                                                    std::move(task)
+                                            )
+                                    );
+
+                                    return;
+
+                                } else {
+
+                                    auto ws_response = new api::web_socket(task.transport_id_);
+                                    api::json_rpc::response_message response_message;
+                                    response_message.id = task.request.id;
+
+                                    response_message.error = api::json_rpc::response_error(
+                                            api::json_rpc::error_code::unknown_error_code,
+                                            "device groups empty");
+
+                                    ws_response->body = api::json_rpc::serialize(response_message);
+
+                                    ctx->addresses("ws")->send(
+                                            messaging::make_message(
+                                                    ctx->self(),
+                                                    "write",
+                                                    api::transport(ws_response)
+                                            )
+                                    );
+                                }
+
+                            } catch (exception &e) {
+
+                                auto ws_response = new api::web_socket(task.transport_id_);
+                                api::json_rpc::response_message response_message;
+                                response_message.id = task.request.id;
+
+                                response_message.error = api::json_rpc::response_error(
+                                        api::json_rpc::error_code::unknown_error_code,
+                                        e.what());
+
+                                ws_response->body = api::json_rpc::serialize(response_message);
+
+                                ctx->addresses("ws")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "write",
+                                                api::transport(ws_response)
+                                        )
+                                );
+                            }
+                        } else {
+
+                            auto ws_response = new api::web_socket(task.transport_id_);
+                            api::json_rpc::response_message response_message;
+                            response_message.id = task.request.id;
+
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "device-key empty");
+
+                            ws_response->body = api::json_rpc::serialize(response_message);
+
+                            ctx->addresses("ws")->send(
+                                    messaging::make_message(
+                                            ctx->self(),
+                                            "write",
+                                            api::transport(ws_response)
+                                    )
+                            );
+                        }
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("unsubscribe", [this](behavior::context &ctx) -> void {
+                        // Отписать на получение уведомлений от устройства
+
+                        auto &task = ctx.message().body<api::task>();
+
+                        auto device_key = task.request.params["device-key"].as<std::string>();
+
+                        auto ws_response = new api::web_socket(task.transport_id_);
+                        api::json_rpc::response_message response_message;
+                        response_message.id = task.request.id;
+
+
+                        if (!device_key.empty()) {
+
+                            try {
+
 
                                 ctx->addresses("subscriptions")->send(
                                         messaging::make_message(
                                                 ctx->self(),
-                                                "on",
+                                                "off",
                                                 std::move(task)
                                         )
                                 );
@@ -346,25 +470,6 @@ namespace stream_cloud {
                                         ctx->self(),
                                         "write",
                                         api::transport(ws_response)
-                                )
-                        );
-
-                    })
-            );
-
-            attach(
-                    behavior::make_handler("unsubscribe", [this](behavior::context &ctx) -> void {
-                        // Отписать на получение уведомлений от устройства
-
-                        auto &task = ctx.message().body<api::task>();
-
-                        auto device_key = task.request.params["device-key"].as<std::string>();
-
-                        ctx->addresses("subscriptions")->send(
-                                messaging::make_message(
-                                        ctx->self(),
-                                        "off",
-                                        std::move(task)
                                 )
                         );
                     })

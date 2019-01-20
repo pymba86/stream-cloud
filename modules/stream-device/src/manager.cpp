@@ -59,10 +59,12 @@ namespace stream_cloud {
                         if (transport_type == api::transport_type::ws) {
                             api::json::json_map message{api::json::data{ws->body}};
 
+                            std::cout << "manager: " << message << std::endl;
+
                             if (api::json_rpc::is_request(message)) {
 
                                 auto id = message["metadata"]["transport"].as<api::transport_id>();
-                                auto *ws_manager = new api::web_socket(id);
+
 
 
                                 api::task task;
@@ -109,6 +111,8 @@ namespace stream_cloud {
 
                                                 ws->body = api::json_rpc::serialize(response_message);
 
+                                                auto *ws_manager = new api::web_socket(id);
+
                                                 ctx->addresses("ws")->send(
                                                         messaging::make_message(
                                                                 ctx->self(),
@@ -118,6 +122,8 @@ namespace stream_cloud {
                                                 );
                                             }
                                         } else {
+
+                                            auto *ws_manager = new api::web_socket(id);
 
                                             api::json_rpc::response_message response_message;
                                             response_message.id = task.request.id;
@@ -291,11 +297,13 @@ namespace stream_cloud {
 
                             metadata["transport"] = ws->id();
                             metadata["device-key"] = pimpl->device_key;
+                            metadata["manager-key"] = pimpl->manager_key;
+                            metadata["user-key"] = pimpl->profile_key;
 
                             message["metadata"] = metadata;
 
 
-                            auto ws_response = new api::web_socket(ws->id());
+                            auto *ws_response = new api::web_socket(ws->id());
                             ws_response->body = message.to_string();
 
                             ctx->addresses("client")->send(

@@ -13,7 +13,7 @@ namespace stream_cloud {
             }
 
             bool is_request(const json::json_map &msg) {
-                return contains(msg, "method");
+                return contains(msg, "method") && contains(msg, "id");
             }
 
             bool is_response(const json::json_map &msg) {

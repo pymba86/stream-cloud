@@ -86,11 +86,14 @@ namespace stream_cloud {
                 } else {
 
                     for (auto const &pipe : pipe_) {
+
+                        api::transport transport(ptr);
+
                         pipe->send(
                                 messaging::make_message(
                                         pipe,
                                         write_handler_name,
-                                        api::transport(ptr)
+                                        api::transport(transport)
                                 )
                         );
                     }

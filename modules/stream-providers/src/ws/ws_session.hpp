@@ -62,7 +62,7 @@ namespace stream_cloud {
                     };
 
                     ws_session &self_;
-                    std::vector<std::unique_ptr<work>> items_;
+                    std::vector<std::shared_ptr<work>> items_;
 
                 public:
                     explicit queue(ws_session &self);
@@ -75,33 +75,32 @@ namespace stream_cloud {
                     bool on_write();
 
                     // Called by the HTTP handler to send a response.
-                    void operator()(const std::string &msg) {
+                    void operator()(std::shared_ptr<std::string const> const& msg) {
                         // This holds a work item
                         struct work_impl final : work {
                             ws_session &self_;
-                            const std::string msg_;
+                            std::shared_ptr<std::string const> msg_;
 
                             work_impl(
                                     ws_session &self,
-                                    std::string msg)
+                                    std::shared_ptr<std::string const> msg)
                                     : self_(self), msg_(std::move(msg)) {
                             }
 
                             void
                             operator()() { // self_.ws_.
-                                self_.ws_.async_write(boost::asio::buffer(msg_),
-                                                      boost::asio::bind_executor(
-                                                              self_.strand_,
-                                                              std::bind(
-                                                                      &ws_session::on_write,
-                                                                      self_.shared_from_this(),
-                                                                      std::placeholders::_1,
-                                                                      std::placeholders::_2)));
+                                self_.ws_.async_write(
+                                        boost::asio::buffer(*msg_),
+                                        std::bind(
+                                                &ws_session::on_write,
+                                                self_.shared_from_this(),
+                                                std::placeholders::_1,
+                                                std::placeholders::_2));
                             }
                         };
 
                         // Allocate and store the work
-                        items_.push_back(boost::make_unique<work_impl>(self_, msg));
+                        items_.push_back(std::make_shared<work_impl>(self_, msg));
 
                         // If there was no previous work, start this one
                         if (items_.size() == 1)
@@ -141,7 +140,7 @@ namespace stream_cloud {
 
                 websocket::stream<tcp::socket> ws_;
                 boost::asio::strand<boost::asio::io_context::executor_type> strand_;
-                boost::beast::multi_buffer buffer_;
+                boost::beast::flat_buffer buffer_;
                 actor::actor_address main_pipe_;
                 queue queue_;
             };

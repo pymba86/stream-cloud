@@ -30,10 +30,10 @@ namespace stream_cloud {
                 buffer_.consume(buffer_.size());
 
                 // Inform the queue that a write completed
-                if (queue_.on_write()) {
-                    // Read another request
-                    do_read();
-                }
+               if (queue_.on_write()) {
+                   do_read();
+               }
+
             }
 
             void ws_session::on_read(boost::system::error_code ec, std::size_t bytes_transferred) {
@@ -47,7 +47,7 @@ namespace stream_cloud {
                             messaging::make_message(
                                     pipe_,
                                     error,
-                                    std::move(ws_error)
+                                    api::transport(ws_error)
                             )
                     );
                     return;
@@ -60,16 +60,16 @@ namespace stream_cloud {
                         messaging::make_message(
                                 pipe_,
                                 dispatcher,
-                                std::move(ws_data)
+                                api::transport(ws_data)
                         )
                 );
 
                 buffer_.consume(buffer_.size());
 
                 // If we aren't at the queue limit, try to pipeline another request
-                if (!queue_.is_full()) {
-                    do_read();
-                }
+
+                do_read();
+
             }
 
             void ws_session::do_read() {
@@ -82,8 +82,7 @@ namespace stream_cloud {
                                 std::placeholders::_2));
             }
 
-            void ws_session::close()
-            {
+            void ws_session::close() {
                 boost::system::error_code ec;
                 ws_.close(boost::beast::websocket::close_code::normal, ec);
             }
@@ -141,22 +140,22 @@ namespace stream_cloud {
 
                 auto *ws = new api::web_socket(id_);
                 ws->body = boost::beast::buffers_to_string(buffer_.data());
+                api::transport ws_data(ws);
                 pipe_->send(
                         messaging::make_message(
                                 pipe_,
                                 handshake,
-                                api::transport(ws)
+                                api::transport(ws_data)
                         )
                 );
 
                 buffer_.consume(buffer_.size());
 
                 // If we aren't at the queue limit, try to pipeline another request
-                if (!queue_.is_full()) {
-                    do_read();
-                }
-            }
 
+                    do_read();
+
+            }
 
 
             ws_session::ws_session(boost::asio::io_context &ioc,
@@ -172,20 +171,19 @@ namespace stream_cloud {
 
 
             void ws_session::write(const intrusive_ptr<api::web_socket> &ptr) {
-
-                queue_(ptr->body);
+                queue_(std::make_shared<std::string const>(ptr->body));
             }
 
             void ws_session::write(const std::string &value) {
-                queue_(value);
+                queue_(std::make_shared<std::string const>(value));
             };
 
             bool ws_session::queue::on_write() {
-                BOOST_ASSERT(!items_.empty());
-                auto const was_full = is_full();
-                items_.erase(items_.begin());
-                if (!items_.empty())
-                    (*items_.front())();
+               // BOOST_ASSERT(!items_.empty());
+                auto const was_full = empty();
+                pop_front();
+                if (!empty())
+                        (*front())();
                 return was_full;
             }
 
@@ -195,7 +193,7 @@ namespace stream_cloud {
 
             ws_session::queue::queue(ws_session &self) : self_(self) {
                 static_assert(limit > 0, "queue_vm limit must be positive");
-                items_.reserve(limit);
+               // items_.reserve(limit);
             }
 
         }

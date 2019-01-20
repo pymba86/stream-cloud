@@ -492,7 +492,7 @@ namespace stream_cloud {
                             task.request.metadata["transport"] = task.transport_id_;
 
                             // Отправляем действие устройству - action
-                            auto ws_response = new api::web_socket(device_transport_id);
+                            auto *ws_response = new api::web_socket(device_transport_id);
 
                             api::json_rpc::request_message request_device_message;
                             request_device_message.id = "0";
@@ -503,11 +503,13 @@ namespace stream_cloud {
 
                             ws_response->body = api::json_rpc::serialize(request_device_message);
 
+                            api::transport ws_res(ws_response);
+
                             ctx->addresses("ws")->send(
                                     messaging::make_message(
                                             ctx->self(),
                                             "write",
-                                            api::transport(ws_response)
+                                            std::move(ws_res)
                                     )
                             );
 
@@ -540,20 +542,102 @@ namespace stream_cloud {
 
                         auto &transport = ctx.message().body<api::transport>();
 
-                        auto *ws = static_cast<api::web_socket *>(transport.get());
+                        auto *ws = static_cast<api::web_socket *>(transport.release());
 
                         // Отправляем ответ от проверенного менеджера клиенту
                         api::json::json_map message{api::json::data{ws->body}};
 
-                        auto transports_id = message["metadata"]["transport"].as<api::transport_id>();
-                        auto device_key = message["metadata"]["device-key"].as<std::string>();
+                        if (api::json_rpc::is_response(message)) {
+
+                            auto transports_id = message["metadata"]["transport"].as<api::transport_id>();
+                            auto device_key = message["metadata"]["device-key"].as<std::string>();
+
+                            if (pimpl->is_reg_device(device_key)) {
+
+                                message.erase("metadata");
+
+                                auto *ws_response = new api::web_socket(transports_id);
+                                ws_response->body = message.to_string();
+
+                                api::transport ws_res(ws_response);
+
+                                ctx->addresses("ws")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "write",
+                                                std::move(ws_res)
+                                        )
+                                );
+                            }
+                        }
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("notify", [this](behavior::context &ctx) -> void {
+                        // Получение уведомления от устройства
+
+                        auto &transport = ctx.message().body<api::transport>();
+
+                        auto *ws = static_cast<api::web_socket *>(transport.release());
+
+                        api::json::json_map message{api::json::data{ws->body}};
+
+                        std::cout << "notify: " <<  message << std::endl;
+
+                        if (api::json_rpc::is_notify(message)) {
+
+                            auto device_key = message["metadata"]["device-key"].as<std::string>();
+
+
+
+                            if (pimpl->is_reg_device(device_key)) {
+
+                                auto ws_notify = new api::web_socket(ws->id());
+                                ws_notify->body = message.to_string();
+
+                                api::transport ws_not(ws_notify);
+
+                                ctx->addresses("subscriptions")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "emit",
+                                                std::move(ws_not)
+                                        )
+                                );
+                            }
+                        }
+                    })
+            );
+
+            attach(
+                    behavior::make_handler("subscribe", [this](behavior::context &ctx) -> void {
+                        // Получение уведомления от устройства
+
+                        auto &task = ctx.message().body<api::task>();
+
+                        auto device_key = task.request.params["device-key"].as<std::string>();
 
                         if (pimpl->is_reg_device(device_key)) {
 
-                            message.erase("metadata");
+                            ctx->addresses("connections")->send(
+                                    messaging::make_message(
+                                            ctx->self(),
+                                            "subscribe",
+                                            std::move(task)
+                                    )
+                            );
+                        } else {
 
-                            auto ws_response = new api::web_socket(transports_id);
-                            ws_response->body = message.to_string();
+                            auto ws_response = new api::web_socket(task.transport_id_);
+                            api::json_rpc::response_message response_message;
+
+                            response_message.id = task.request.id;
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "device not connected");
+
+                            ws_response->body = api::json_rpc::serialize(response_message);
 
                             ctx->addresses("ws")->send(
                                     messaging::make_message(
@@ -567,28 +651,39 @@ namespace stream_cloud {
             );
 
             attach(
-                    behavior::make_handler("notify", [this](behavior::context &ctx) -> void {
+                    behavior::make_handler("unsubscribe", [this](behavior::context &ctx) -> void {
                         // Получение уведомления от устройства
 
-                        auto &transport = ctx.message().body<api::transport>();
+                        auto &task = ctx.message().body<api::task>();
 
-                        auto *ws = static_cast<api::web_socket *>(transport.get());
-
-                        api::json::json_map message{api::json::data{ws->body}};
-
-                        auto transports_id = message["metadata"]["transport"].as<api::transport_id>();
-                        auto device_key = message["metadata"]["device-key"].as<std::string>();
+                        auto device_key = task.request.params["device-key"].as<std::string>();
 
                         if (pimpl->is_reg_device(device_key)) {
 
-                            auto ws_notify = new api::web_socket(transports_id);
-                            ws_notify->body = message.to_string();
-
-                            ctx->addresses("subscriptions")->send(
+                            ctx->addresses("connections")->send(
                                     messaging::make_message(
                                             ctx->self(),
-                                            "emit",
-                                            api::transport(ws_notify)
+                                            "unsubscribe",
+                                            std::move(task)
+                                    )
+                            );
+                        } else {
+
+                            auto ws_response = new api::web_socket(task.transport_id_);
+                            api::json_rpc::response_message response_message;
+
+                            response_message.id = task.request.id;
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    "device not connected");
+
+                            ws_response->body = api::json_rpc::serialize(response_message);
+
+                            ctx->addresses("ws")->send(
+                                    messaging::make_message(
+                                            ctx->self(),
+                                            "write",
+                                            api::transport(ws_response)
                                     )
                             );
                         }
