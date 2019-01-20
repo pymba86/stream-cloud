@@ -2,6 +2,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/cxx11/any_of.hpp>
 #include  <boost/beast/websocket/error.hpp>
+#include <boost/beast/http.hpp>
 #include <router.hpp>
 
 #include <unordered_map>
@@ -186,13 +187,6 @@ namespace stream_cloud {
                                                 )
                                         );
                                     }
-                                } else if (transport_type == api::transport_type::http) {
-                                    // Проверяем на trusted_url
-                                    // Отдаем клиента менеджера
-                                    // Отдаем клиента платформы
-                                    // Отдаем статичные файлы
-                                } else {
-                                    // Неопределенная ошибка
                                 }
                             }
                     )
@@ -280,7 +274,7 @@ namespace stream_cloud {
 
                             if (error->code == boost::asio::error::connection_reset
                                 || error->code == boost::asio::error::not_connected
-                                   || error->code == boost::beast::websocket::error::closed) {
+                                || error->code == boost::beast::websocket::error::closed) {
                                 // Соединение сброшено на другой стороне
 
                                 auto ws_response = new api::web_socket(error->id());

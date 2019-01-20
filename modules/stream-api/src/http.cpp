@@ -1,4 +1,6 @@
 #include <http.hpp>
+#include "http.hpp"
+
 
 namespace stream_cloud {
     namespace api {

@@ -64,7 +64,6 @@ namespace stream_cloud {
             std::string method_;
             std::string body_;
             header_storage headers_;
-
         };
 
     }
