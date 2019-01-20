@@ -27,5 +27,6 @@ target_link_libraries(
         stream-io
         stream-providers
         stream-storage
+        stream-manager-info
         dl
 )

@@ -33,5 +33,6 @@ target_link_libraries(
         stream-providers
         stream-client
         stream-storage
+        stream-manager-info
         dl
 )

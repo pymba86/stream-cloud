@@ -243,56 +243,6 @@ namespace stream_cloud {
             );
 
 
-            behavior::make_handler("info", [this](behavior::context &ctx) -> void {
-                // Получить ключ менеджера по url
-
-                auto &task = ctx.message().body<api::task>();
-
-                auto manager_url = task.request.params["url"].as<std::string>();
-
-                std::vector<std::string> url;
-                boost::algorithm::split(url, manager_url,
-                                        boost::is_any_of(","));
-
-                // Отправляем ответ
-                auto ws_response = new api::web_socket(task.transport_id_);
-                api::json_rpc::response_message response_message;
-                response_message.id = task.request.id;
-
-
-                if (url.size() > 1) {
-
-                    const auto& key = url[0] + "." + url[1];
-
-                    if (pimpl->is_reg_manager(key)) {
-
-                        response_message.result = key;
-
-                    } else {
-                        response_message.error = api::json_rpc::response_error(
-                                api::json_rpc::error_code::unknown_error_code,
-                                "manager not connected");
-                    }
-
-                } else {
-                    response_message.error = api::json_rpc::response_error(
-                            api::json_rpc::error_code::unknown_error_code,
-                            "url not permission");
-
-                }
-
-                ws_response->body = api::json_rpc::serialize(response_message);
-
-                ctx->addresses("ws")->send(
-                        messaging::make_message(
-                                ctx->self(),
-                                "write",
-                                api::transport(ws_response)
-                        )
-                );
-
-            })
-            );
 
             attach(
                     behavior::make_handler("connect", [this](behavior::context &ctx) -> void {

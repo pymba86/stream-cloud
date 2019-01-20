@@ -11,6 +11,7 @@
 #include <ws/ws_server.hpp>
 #include <ws/ws_client.hpp>
 #include <boost/stacktrace.hpp>
+#include <manager_info.hpp>
 
 #include "actor/actor.hpp"
 #include <messaging/message.hpp>
@@ -51,8 +52,7 @@ void init_service(config::dynamic_environment &env) {
     auto &connections = env.add_service<manager::connections>();
     auto &devices = env.add_service<manager::devices>();
     auto &platform = env.add_service<manager::platform>();
-
-    // TODO Передалать на   environment::cooperation::link
+    auto &manager_info = env.add_service<system::manager_info>();
 
     // Поставшики данных
     auto &client_provider = env.add_data_provider<client::ws_client::ws_client>(platform->entry_point());
@@ -132,6 +132,11 @@ void init_service(config::dynamic_environment &env) {
     router->join(subscriptions);
     router->join(connections);
     router->join(devices);
+    router->join(manager_info);
+
+    // Менеджер инфо
+    manager_info->add_shared(ws_provider.address().operator->());
+    manager_info->join(router);
 
 }
 

@@ -3,7 +3,7 @@
 #include <router.hpp>
 #include <http/http_server.hpp>
 #include <ws/ws_server.hpp>
-#include <settings.hpp>
+#include <manager_info.hpp>
 #include "profile.hpp"
 #include "managers.hpp"
 
@@ -38,9 +38,9 @@ void init_service(config::dynamic_environment &env) {
     auto &router = env.add_service<platform::router>();
     auto &http = env.add_data_provider<providers::http_server::http_server>(router->entry_point());
     auto &ws = env.add_data_provider<providers::ws_server::ws_server>(router->entry_point(), std::initializer_list<actor::actor_address>{});
-    auto &settings = env.add_service<settings::settings>();
     auto &profile = env.add_service<platform::profile>();
     auto &managers = env.add_service<platform::managers>();
+    auto &manager_info = env.add_service<system::manager_info>();
 
     // Профиль
     profile->add_shared(ws.address().operator->());
@@ -51,16 +51,18 @@ void init_service(config::dynamic_environment &env) {
     managers->add_shared(http.address().operator->());
     managers->join(router);
 
-    // Настройки
-
-
     // Роутер
     router->add_shared(http.address().operator->());
     router->add_shared(ws.address().operator->());
 
-    router->join(settings);
     router->join(profile);
     router->join(managers);
+    router->join(manager_info);
+
+
+    // Менеджер инфо
+    manager_info->add_shared(ws.address().operator->());
+    manager_info->join(router);
 
 }
 

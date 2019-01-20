@@ -30,11 +30,11 @@ namespace stream_cloud {
             impl() = default;
 
             std::vector<std::string> get_service_list() const {
-                return {"profile", "managers", "settings"};
+                return {"profile", "managers", "manager"};
             }
 
             std::vector<std::string> get_quest_method_list() const {
-                return {"profile.signup", "profile.login"};
+                return {"profile.signup", "profile.login", "manager.info"};
             }
 
             ~impl() = default;

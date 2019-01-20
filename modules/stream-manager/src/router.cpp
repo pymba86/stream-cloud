@@ -30,11 +30,11 @@ namespace stream_cloud {
                     : profile_key(std::move(profile_key)), manager_key(std::move(manager_key)) {};
 
             std::vector<std::string> get_service_list() const {
-                return {"users", "devices", "settings", "groups", "subscriptions", "connections", "devices"};
+                return {"users", "devices", "groups", "subscriptions", "connections", "devices"};
             }
 
             std::vector<std::string> get_quest_method_list() const {
-                return {"users.login"};
+                return {"users.login", "manager.info"};
             }
 
             std::vector<std::string> get_user_method_list() const {
@@ -77,57 +77,6 @@ namespace stream_cloud {
                                         std::vector<std::string> dispatcher;
                                         boost::algorithm::split(dispatcher, task_.request.method,
                                                                 boost::is_any_of("."));
-
-
-                                        if (api::json_rpc::contains(task_.request.metadata,
-                                                                    "manager-key")) {
-
-                                            // Проверяем на соответствие ключей
-                                            auto key = task_.request.metadata["manager-key"].as<std::string>();
-
-                                            if (key != pimpl->manager_key) {
-
-                                                auto ws_response = new api::web_socket(task_.transport_id_);
-                                                api::json_rpc::response_message response_message;
-                                                response_message.id = task_.request.id;
-                                                response_message.metadata = task_.request.metadata;
-
-                                                response_message.error = api::json_rpc::response_error(
-                                                        api::json_rpc::error_code::unknown_error_code,
-                                                        "manager key not equals");
-
-                                                ws_response->body = api::json_rpc::serialize(response_message);
-
-                                                ctx->addresses("ws")->send(
-                                                        messaging::make_message(
-                                                                ctx->self(),
-                                                                "write",
-                                                                api::transport(ws_response)
-                                                        )
-                                                );
-                                                return;
-                                            }
-                                        } else {
-                                            auto ws_response = new api::web_socket(task_.transport_id_);
-                                            api::json_rpc::response_message response_message;
-                                            response_message.id = task_.request.id;
-                                            response_message.metadata = task_.request.metadata;
-
-                                            response_message.error = api::json_rpc::response_error(
-                                                    api::json_rpc::error_code::unknown_error_code,
-                                                    "manager key required");
-
-                                            ws_response->body = api::json_rpc::serialize(response_message);
-
-                                            ctx->addresses("ws")->send(
-                                                    messaging::make_message(
-                                                            ctx->self(),
-                                                            "write",
-                                                            api::transport(ws_response)
-                                                    )
-                                            );
-                                            return;
-                                        }
 
                                         if (dispatcher.size() > 1) {
 
