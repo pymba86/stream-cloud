@@ -3,6 +3,7 @@
   "num_worker_threads": 1,
   "max_throughput_param_worker": 1000,
   "ws-port": "8091",
+  "http-dir": "web",
   "profile-key": "pymba86.123",
   "manager-key": "pymba86.home",
   "device-key": "pymba86.dev1",

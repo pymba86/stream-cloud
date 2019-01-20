@@ -26,24 +26,27 @@ namespace stream_cloud {
 
             };
 
-            http_server::http_server(config::config_context_t *ctx, actor::actor_address address):
-                    data_provider(ctx,"http"),
+            http_server::http_server(config::config_context_t *ctx, actor::actor_address address) :
+                    data_provider(ctx, "http"),
                     pimpl(new impl) {
 
                 auto const address_ = boost::asio::ip::make_address("127.0.0.1");
 
                 auto string_port = ctx->config()["http-port"].as<std::string>();
+                auto dir_path = ctx->config()["http-dir"].as<std::string>();
+
                 auto tmp_port = std::stoul(string_port);
                 auto port = static_cast<unsigned short>(tmp_port);
 
-                pimpl->listener_ = std::make_shared<listener>(ctx->main_loop(), tcp::endpoint{address_, port},address);
+                pimpl->listener_ = std::make_shared<listener>(ctx->main_loop(), tcp::endpoint{address_, port},
+                                                              address, std::make_shared<std::string>(dir_path));
 
                 attach(
                         behavior::make_handler(
                                 "print",
-                                [this](behavior::context& ctx) -> void {
+                                [this](behavior::context &ctx) -> void {
                                     auto t = ctx.message().body<api::transport>();
-                                   std::cout << "id: " << t->id() << std::endl;
+                                    std::cout << "id: " << t->id() << std::endl;
                                 }
                         )
                 );
@@ -51,10 +54,8 @@ namespace stream_cloud {
                 attach(
                         behavior::make_handler(
                                 "write",
-                                [this](behavior::context& ctx) -> void {
-                                    auto t = ctx.message().body<api::transport>();
-                                    std::unique_ptr<api::http> transport(static_cast<api::http*>(t.release()));
-                                    pimpl->listener_->write(std::move(transport));
+                                [this](behavior::context &ctx) -> void {
+
                                 }
                         )
                 );
@@ -62,8 +63,8 @@ namespace stream_cloud {
                 attach(
                         behavior::make_handler(
                                 "add_trusted_url",
-                                [this](behavior::context& ctx) -> void {
-                                    auto app_name =ctx.message().body<std::string>();
+                                [this](behavior::context &ctx) -> void {
+                                    auto app_name = ctx.message().body<std::string>();
                                     pimpl->listener_->add_trusted_url(app_name);
                                 }
                         )
@@ -72,8 +73,8 @@ namespace stream_cloud {
                 attach(
                         behavior::make_handler(
                                 "remove_trusted_url",
-                                [this](behavior::context& ctx) -> void {
-                                    auto app_name =ctx.message().body<std::string>();
+                                [this](behavior::context &ctx) -> void {
+                                    auto app_name = ctx.message().body<std::string>();
                                     pimpl->listener_->remove_trusted_url(app_name);
                                 }
                         )
@@ -82,10 +83,8 @@ namespace stream_cloud {
                 attach(
                         behavior::make_handler(
                                 "close",
-                                [this](behavior::context& ctx) -> void {
-                                    auto t = ctx.message().body<api::transport>();
-                                    std::unique_ptr<api::http> transport(static_cast<api::http*>(t.release()));
-                                    pimpl->listener_->close(std::move(transport));
+                                [this](behavior::context &ctx) -> void {
+
                                 }
                         )
                 );

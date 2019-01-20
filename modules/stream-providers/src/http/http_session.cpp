@@ -15,14 +15,13 @@ namespace stream_cloud {
             >
             using request = http::request<Body, http::basic_fields<Allocator>>;
 
-            http_session::http_session(tcp::socket socket, const api::transport_id& id, http_context& pipe_)
+            http_session::http_session(tcp::socket socket, http_context& pipe_)
                     :
                     socket_(std::move(socket)),
                     strand_(socket_.get_executor()),
                     timer_(socket_.get_executor().context(), (std::chrono::steady_clock::time_point::max) ()),
                     queue_(*this),
-                    handle_processing(pipe_),
-                    id(id) {
+                    handle_processing(pipe_) {
             }
 
             void http_session::run() {
@@ -86,7 +85,7 @@ namespace stream_cloud {
                 }
 
                 // Send the response
-                handle_processing(std::move(req_), id);
+                handle_processing(std::move(req_), shared_from_this());
 
                 // If we aren't at the queue limit, try to pipeline another request
                 if (!queue_.is_full()) {

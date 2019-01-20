@@ -8,6 +8,21 @@
 #include "http_context.hpp"
 #include "http_session.hpp"
 #include <transport_base.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/http.hpp>
+#include <boost/beast/version.hpp>
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/config.hpp>
+#include <algorithm>
+#include <cstdlib>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <thread>
+#include <vector>
 
 namespace stream_cloud {
     namespace providers {
@@ -19,14 +34,11 @@ namespace stream_cloud {
                 listener(
                         boost::asio::io_context &ioc,
                         tcp::endpoint endpoint,
-                        actor::actor_address pipe_
+                        actor::actor_address pipe_,
+                        std::shared_ptr<std::string const> const& doc_root
                 );
 
                 ~listener() override = default;
-
-                void write(const intrusive_ptr<api::http>& ptr);
-
-                void close(const intrusive_ptr<api::http>& ptr);
 
                 void add_trusted_url(std::string name);
 
@@ -34,7 +46,11 @@ namespace stream_cloud {
 
                 auto check_url(const std::string &) const  -> bool override;
 
-                auto operator()(http::request <http::string_body>&& ,api::transport_id ) const -> void override;
+                auto operator()(http::request <http::string_body>&& , const std::shared_ptr<http_session>& ) -> void override;
+
+                std::string path_cat(boost::beast::string_view base, boost::beast::string_view path) const;
+
+                boost::beast::string_view mime_type(boost::beast::string_view path) const;
 
                 void run();
 
@@ -47,8 +63,7 @@ namespace stream_cloud {
                 tcp::socket socket_;
                 actor::actor_address pipe_;
                 std::unordered_set<std::string> trusted_url;
-                std::unordered_map<api::transport_id,std::shared_ptr<http_session>> storage_session;
-
+                std::shared_ptr<std::string const> doc_root_;
 
             };
         }

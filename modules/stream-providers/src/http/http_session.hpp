@@ -43,15 +43,15 @@ namespace stream_cloud {
 
                     // Called by the HTTP handler to send a response.
                     template<bool isRequest, class Body, class Fields>
-                    void operator()(http::message <isRequest, Body, Fields> &&msg) {
+                    void operator()(http::message<isRequest, Body, Fields> &&msg) {
                         // This holds a work item
                         struct work_impl final : work {
                             http_session &self_;
-                            http::message <isRequest, Body, Fields> msg_;
+                            http::message<isRequest, Body, Fields> msg_;
 
                             work_impl(
                                     http_session &self,
-                                    http::message <isRequest, Body, Fields> &&msg)
+                                    http::message<isRequest, Body, Fields> &&msg)
                                     : self_(self), msg_(std::move(msg)) {
                             }
 
@@ -83,12 +83,11 @@ namespace stream_cloud {
                 boost::asio::strand<boost::asio::io_context::executor_type> strand_;
                 boost::asio::steady_timer timer_;
                 boost::beast::flat_buffer buffer_;
-                http::request <http::string_body> req_;
+                http::request<http::string_body> req_;
                 queue queue_;
-                http_context& handle_processing;
-                api::transport_id id;
+                http_context &handle_processing;
             public:
-                http_session(tcp::socket socket, const api::transport_id& , http_context& );
+                http_session(tcp::socket socket, http_context &);
 
                 ~http_session();
 
@@ -106,7 +105,12 @@ namespace stream_cloud {
 
                 void do_close();
 
-                void write(const intrusive_ptr<api::http>& ptr);
+                void write(const intrusive_ptr<api::http> &ptr);
+
+                template<bool isRequest, class Body, class Fields>
+                void send(http::message<isRequest, Body, Fields>&& msg) {
+                    queue_(std::move(msg));
+                };
 
             };
 

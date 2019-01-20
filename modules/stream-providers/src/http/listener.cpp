@@ -2,44 +2,48 @@
 #include "listener.hpp"
 #include <intrusive_ptr.hpp>
 
+
 namespace stream_cloud {
     namespace providers {
         namespace http_server {
+
             using clock = std::chrono::steady_clock;
 
             constexpr const char *dispatcher = "dispatcher";
 
-            listener::listener(boost::asio::io_context &ioc, tcp::endpoint endpoint, actor::actor_address pipe_) :
+            listener::listener(boost::asio::io_context &ioc, tcp::endpoint endpoint, actor::actor_address pipe_,
+                               std::shared_ptr<std::string const> const &doc_root) :
                     acceptor_(ioc),
                     socket_(ioc),
-                    pipe_(pipe_) {
+                    pipe_(pipe_),
+                    doc_root_(doc_root) {
                 boost::system::error_code ec;
 
                 // Open the acceptor
                 acceptor_.open(endpoint.protocol(), ec);
                 if (ec) {
-                  //  fail(ec, "open");
+                    //  fail(ec, "open");
                     return;
                 }
 
                 // Allow address reuse
                 acceptor_.set_option(boost::asio::socket_base::reuse_address(true), ec);
                 if (ec) {
-                  //  fail(ec, "set_option");
+                    //  fail(ec, "set_option");
                     return;
                 }
 
                 // Bind to the server address
                 acceptor_.bind(endpoint, ec);
                 if (ec) {
-                  //  fail(ec, "bind");
+                    //  fail(ec, "bind");
                     return;
                 }
 
                 // Start listening for connections
                 acceptor_.listen(boost::asio::socket_base::max_listen_connections, ec);
                 if (ec) {
-                   // fail(ec, "listen");
+                    // fail(ec, "listen");
                     return;
                 }
             }
@@ -63,26 +67,13 @@ namespace stream_cloud {
 
             void listener::on_accept(boost::system::error_code ec) {
                 if (ec) {
-                   // fail(ec, "accept");
+                    // fail(ec, "accept");
                 } else {
-                    auto id_= std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(clock::now().time_since_epoch()).count());
-                    auto session = std::make_shared<http_session>(std::move(socket_),id_,*this);
-                    storage_session.emplace(id_,std::move(session));
-                    storage_session.at(id_)->run();
+                    std::make_shared<http_session>(std::move(socket_), *this)->run();
                 }
 
                 // Accept another connection
                 do_accept();
-            }
-
-            void listener::write(const intrusive_ptr<api::http>& ptr) {
-                auto &session = storage_session.at(ptr->id());
-                session->write(ptr);
-                close(ptr);
-            }
-
-            void listener::close(const intrusive_ptr<api::http>& ptr) {
-                storage_session.erase(ptr->id());
             }
 
             void listener::add_trusted_url(std::string name) {
@@ -96,40 +87,152 @@ namespace stream_cloud {
             auto listener::check_url(const std::string &url) const -> bool {
                 ///TODO: not fast
                 auto start = url.begin();
-               // trusted_url.find(url) != trusted_url.end();
+                // trusted_url.find(url) != trusted_url.end();
                 ++start;
-                return (trusted_url.find(std::string(start,url.end()))!=trusted_url.end());
+                return (trusted_url.find(std::string(start, url.end())) != trusted_url.end());
             }
 
-            auto listener::operator()(http::request <http::string_body>&& req,api::transport_id id) const -> void {
+            // Append an HTTP rel-path to a local filesystem path.
+            std::string listener::path_cat(boost::beast::string_view base, boost::beast::string_view path) const {
+                if (base.empty())
+                    return path.to_string();
+                std::string result = base.to_string();
 
-                auto http = make_intrusive<api::http>(id);
+                char constexpr path_separator = '/';
+                if (result.back() == path_separator)
+                    result.resize(result.size() - 1);
+                result.append(path.data(), path.size());
 
-                http->method(std::string(req.method_string()));
+                return result;
+            }
 
-                http->uri(std::string(req.target()));
+            boost::beast::string_view listener::mime_type(boost::beast::string_view path) const {
+                using boost::beast::iequals;
+                auto const ext = [&path] {
+                    auto const pos = path.rfind(".");
+                    if (pos == boost::beast::string_view::npos)
+                        return boost::beast::string_view{};
+                    return path.substr(pos);
+                }();
+                if (iequals(ext, ".htm")) return "text/html";
+                if (iequals(ext, ".html")) return "text/html";
+                if (iequals(ext, ".php")) return "text/html";
+                if (iequals(ext, ".css")) return "text/css";
+                if (iequals(ext, ".txt")) return "text/plain";
+                if (iequals(ext, ".js")) return "application/javascript";
+                if (iequals(ext, ".json")) return "application/json";
+                if (iequals(ext, ".xml")) return "application/xml";
+                if (iequals(ext, ".swf")) return "application/x-shockwave-flash";
+                if (iequals(ext, ".flv")) return "video/x-flv";
+                if (iequals(ext, ".png")) return "image/png";
+                if (iequals(ext, ".jpe")) return "image/jpeg";
+                if (iequals(ext, ".jpeg")) return "image/jpeg";
+                if (iequals(ext, ".jpg")) return "image/jpeg";
+                if (iequals(ext, ".gif")) return "image/gif";
+                if (iequals(ext, ".bmp")) return "image/bmp";
+                if (iequals(ext, ".ico")) return "image/vnd.microsoft.icon";
+                if (iequals(ext, ".tiff")) return "image/tiff";
+                if (iequals(ext, ".tif")) return "image/tiff";
+                if (iequals(ext, ".svg")) return "image/svg+xml";
+                if (iequals(ext, ".svgz")) return "image/svg+xml";
+                return "application/text";
+            }
 
-                for (auto const &field : req) {
 
-                    std::string header_name(field.name_string());
-                    std::string header_value(field.value());
-                    http->header(std::move(header_name), std::move(header_value));
+            auto listener::operator()(http::request<http::string_body> &&req,
+                                      const std::shared_ptr<http_session> &session) -> void {
+
+
+                // Returns a bad request response
+                auto const bad_request =
+                        [&req](boost::beast::string_view why) {
+                            http::response<http::string_body> res{http::status::bad_request, req.version()};
+                            res.set(http::field::content_type, "text/html");
+                            res.keep_alive(req.keep_alive());
+                            res.body() = why.to_string();
+                            res.prepare_payload();
+                            return res;
+                        };
+
+                // Returns a not found response
+                auto const not_found =
+                        [&req](boost::beast::string_view target) {
+                            http::response<http::string_body> res{http::status::not_found, req.version()};
+                            res.set(http::field::content_type, "text/html");
+                            res.keep_alive(req.keep_alive());
+                            res.body() = "The resource '" + target.to_string() + "' was not found.";
+                            res.prepare_payload();
+                            return res;
+                        };
+
+                // Returns a server error response
+                auto const server_error =
+                        [&req](boost::beast::string_view what) {
+                            http::response<http::string_body> res{http::status::internal_server_error, req.version()};
+                            res.set(http::field::content_type, "text/html");
+                            res.keep_alive(req.keep_alive());
+                            res.body() = "An error occurred: '" + what.to_string() + "'";
+                            res.prepare_payload();
+                            return res;
+                        };
+
+                // Make sure we can handle the method
+                if (req.method() != http::verb::get &&
+                    req.method() != http::verb::head)
+                    return session->send(bad_request("Unknown HTTP-method"));
+
+
+
+
+                // Request path must be absolute and not contain "..".
+                if (req.target().empty() ||
+                    req.target()[0] != '/' ||
+                    req.target().find("..") != boost::beast::string_view::npos)
+                    return session->send(bad_request("Illegal request-target"));
+
+
+                // Build the path to the requested file
+                std::string path = path_cat(*doc_root_, req.target());
+                if (req.target().back() == '/')
+                    path.append("index.html");
+
+
+                // Attempt to open the file
+                boost::beast::error_code ec;
+                http::file_body::value_type body;
+                body.open(path.c_str(), boost::beast::file_mode::scan, ec);
+
+                // Handle the case where the file doesn't exist
+                if (ec == boost::beast::errc::no_such_file_or_directory)
+                    return session->send(not_found(req.target()));
+
+                // Handle an unknown error
+                if (ec)
+                    return session->send(server_error(ec.message()));
+
+                // Cache the size since we need it after the move
+                auto const size = body.size();
+
+                // Respond to HEAD request
+                if (req.method() == http::verb::head) {
+                    http::response<http::empty_body> res{http::status::ok, req.version()};
+                    res.set(http::field::content_type, mime_type(path));
+                    res.content_length(size);
+                    res.keep_alive(req.keep_alive());
+                    return session->send(std::move(res));
                 }
 
-                http->body(req.body());
-
-                api::transport http_data(http);
-
-                pipe_->send(
-                        messaging::make_message(
-                                pipe_,
-                                dispatcher,
-                                std::move(http_data)
-                        )
-                );
+                // Respond to GET request
+                http::response<http::file_body> res{
+                        std::piecewise_construct,
+                        std::make_tuple(std::move(body)),
+                        std::make_tuple(http::status::ok, req.version())};
+                res.set(http::field::content_type, mime_type(path));
+                res.content_length(size);
+                res.keep_alive(req.keep_alive());
+                return session->send(std::move(res));
 
             }
-
         }
     }
 }
