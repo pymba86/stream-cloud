@@ -126,14 +126,6 @@ namespace stream_cloud {
 
                                 pimpl->remove_auth_login(login);
 
-                                ctx->addresses("groups")->send(
-                                        messaging::make_message(
-                                                ctx->self(),
-                                                "remove_user",
-                                                std::move(task)
-                                        )
-                                );
-
                             } catch (exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
@@ -242,6 +234,7 @@ namespace stream_cloud {
                                 if (password_param == password || admin_user) {
                                     response_message.result = api::json::json_map{
                                             {"key", user_key},
+                                            {"login", login},
                                             {"admin", admin_user}
                                     };
                                 } else {
