@@ -100,9 +100,7 @@ namespace stream_cloud {
                                            << name
                                            << key;
 
-                                response_message.result = api::json::json_value{
-                                        {"key", key}
-                                };
+                                response_message.result = key;
 
                             } catch (exception &e) {
                                 response_message.error = api::json_rpc::response_error(

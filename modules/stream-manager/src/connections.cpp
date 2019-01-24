@@ -137,15 +137,15 @@ namespace stream_cloud {
                         if (!group_key.empty()) {
 
                             try {
-                                api::json::json_array users_list;
+                                api::json::json_array devices_list;
 
                                 pimpl->db_ << "select device_key from connections where group_key = ?;"
                                            << group_key
                                            >> [&](std::string device_key) {
-                                               users_list.push_back(device_key);
+                                               devices_list.push_back(device_key);
                                            };
 
-                                response_message.result = users_list;
+                                response_message.result = devices_list;
 
                             } catch (exception &e) {
                                 response_message.error = api::json_rpc::response_error(
