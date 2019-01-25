@@ -52,7 +52,7 @@ namespace stream_cloud {
 
 
                         // Отправляем уведомление о изменении значения control.status
-                       /* auto* ws_notify = new api::web_socket(task.transport_id_);
+                        auto* ws_notify = new api::web_socket(task.transport_id_);
 
                         api::json_rpc::notify_message notify_message;
                         notify_message.method = "control.status";
@@ -66,9 +66,9 @@ namespace stream_cloud {
                                 messaging::make_message(
                                         ctx->self(),
                                         "write",
-                                        new api::web_socket(task.transport_id_)
+                                        api::transport(ws_not)
                                 )
-                        ); */
+                        );
 
 
                     })
@@ -100,6 +100,26 @@ namespace stream_cloud {
                                         ctx->self(),
                                         "write",
                                         std::move(ws_res)
+                                )
+                        );
+
+
+                        // Отправляем уведомление о изменении значения control.status
+                        auto* ws_notify = new api::web_socket(task.transport_id_);
+
+                        api::json_rpc::notify_message notify_message;
+                        notify_message.method = "control.status";
+                        notify_message.params =  false;
+
+                        ws_notify->body = api::json_rpc::serialize(notify_message);
+
+                        api::transport ws_not(ws_notify);
+
+                        ctx->addresses("manager")->send(
+                                messaging::make_message(
+                                        ctx->self(),
+                                        "write",
+                                        api::transport(ws_not)
                                 )
                         );
 

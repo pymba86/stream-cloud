@@ -234,7 +234,7 @@ namespace stream_cloud {
                                 if (password_param == password || admin_user) {
                                     response_message.result = api::json::json_map{
                                             {"key", user_key},
-                                            {"login", login},
+                                            {"login", login_param},
                                             {"admin", admin_user}
                                     };
                                 } else {

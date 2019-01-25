@@ -39,7 +39,8 @@ namespace stream_cloud {
 
             std::vector<std::string> get_user_method_list() const {
                 return {"devices.list", "devices.control", "devices.detail", "devices.subscribe",
-                        "devices.unsubscribe"};
+                        "subscriptions.devices", "devices.unsubscribe", "connections.subscribe",
+                        "connections.unsubscribe"};
             }
 
             ~impl() = default;

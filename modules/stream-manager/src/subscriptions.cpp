@@ -255,6 +255,7 @@ namespace stream_cloud {
 
                         auto device_groups = task.request.metadata["device-groups"].as<api::json::json_array>();
                         auto user_login = task.storage["user.login"];
+                        auto user_admin = task.storage["user.admin"];
 
                         if (!device_groups.empty()) {
 
@@ -280,7 +281,7 @@ namespace stream_cloud {
 
                                 task.request.metadata.erase("device-groups");
 
-                                if (access_group_users > 0) {
+                                if (access_group_users > 0 || user_admin == "1") {
 
                                     ctx->addresses("devices")->send(
                                             messaging::make_message(
@@ -365,6 +366,7 @@ namespace stream_cloud {
                         auto device_groups = task.request.metadata["device-groups"].as<api::json::json_array>();
                         auto device_key = task.request.params["device-key"].as<std::string>();
                         auto user_login = task.storage["user.login"];
+                        auto user_admin = task.storage["user.admin"];
 
                         auto ws_response = new api::web_socket(task.transport_id_);
                         api::json_rpc::response_message response_message;
@@ -395,7 +397,7 @@ namespace stream_cloud {
 
                                 task.request.metadata.erase("device-groups");
 
-                                if (user_groups.empty()) {
+                                if (user_groups.empty() && user_admin == "0") {
 
                                     response_message.error = api::json_rpc::response_error(
                                             api::json_rpc::error_code::unknown_error_code,

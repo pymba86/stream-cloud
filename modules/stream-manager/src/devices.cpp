@@ -91,7 +91,7 @@ namespace stream_cloud {
                         api::json_rpc::response_message response_message;
                         response_message.id = task.request.id;
 
-                        if (!name.empty() && name.size() <= 6) {
+                        if (!name.empty()) {
 
                             std::string key = user_login + "." + name;
 
@@ -110,7 +110,7 @@ namespace stream_cloud {
                         } else {
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
-                                    "name device empty or size > 6");
+                                    "name device empty");
                         }
 
                         ws_response->body = api::json_rpc::serialize(response_message);
@@ -493,7 +493,7 @@ namespace stream_cloud {
                             auto *ws_response = new api::web_socket(device_transport_id);
 
                             api::json_rpc::request_message request_device_message;
-                            request_device_message.id = "0";
+                            request_device_message.id = task.request.id;
                             request_device_message.method = task.request.params["action"].as<std::string>();
                             request_device_message.metadata = api::json::json_map{
                                     {"transport", task.transport_id_}
