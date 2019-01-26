@@ -16,7 +16,6 @@ namespace stream_cloud {
         class  abstract_action;
         class  context;
         struct context_t;
-        class  fsm;
     }
 
     namespace channel {

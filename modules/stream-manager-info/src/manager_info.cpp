@@ -24,33 +24,16 @@ namespace stream_cloud {
 
             attach(
                     behavior::make_handler("info", [this](behavior::context &ctx) -> void {
-                        // Получить ключ менеджера по url
+                        // Получить ключ менеджера
                         // По дефолту берется из конфигурации
 
                         auto &task = ctx.message().body<api::task>();
-
-                        auto manager_url = task.request.params["url"].as<std::string>();
-
-                        std::vector<std::string> url;
-                        boost::algorithm::split(url, manager_url,
-                                                boost::is_any_of("/"));
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
                         api::json_rpc::response_message response_message;
                         response_message.id = task.request.id;
-
-
-                        if (url.size() > 1) {
-
-                            const auto &key = url[0] + "." + url[1];
-
-                            response_message.result = key;
-
-
-                        } else {
-                            response_message.result = pimpl->manager_key;
-                        }
+                        response_message.result = pimpl->manager_key;
 
                         ws_response->body = api::json_rpc::serialize(response_message);
 
@@ -64,8 +47,6 @@ namespace stream_cloud {
 
                     })
             );
-
-
         }
 
         void manager_info::startup(config::config_context_t *ctx) {

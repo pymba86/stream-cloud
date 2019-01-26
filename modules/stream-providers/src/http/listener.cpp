@@ -182,8 +182,6 @@ namespace stream_cloud {
                     return session->send(bad_request("Unknown HTTP-method"));
 
 
-
-
                 // Request path must be absolute and not contain "..".
                 if (req.target().empty() ||
                     req.target()[0] != '/' ||
@@ -191,10 +189,28 @@ namespace stream_cloud {
                     return session->send(bad_request("Illegal request-target"));
 
 
-                // Build the path to the requested file
-                std::string path = path_cat(*doc_root_, req.target());
-                if (req.target().back() == '/')
-                    path.append("index.html");
+                // Поддомен
+                std::string sub_domain;
+                std::string root_path;
+                auto const host = req.at(http::field::host);
+                auto const pos_domain = host.find_first_of(".");
+
+                if (pos_domain == boost::beast::string_view::npos) {
+                    sub_domain = {};
+                    root_path = *doc_root_;
+                } else {
+                    sub_domain =  host.substr(0, pos_domain).to_string();
+                    root_path =  *doc_root_ + "/" + sub_domain;
+                }
+
+                std::string path;
+
+                if (req.target().rfind(".") == boost::beast::string_view::npos) {
+                    path = path_cat(root_path, "/index.html");
+                } else {
+                    path  = path_cat(root_path, req.target());
+                }
+
 
 
                 // Attempt to open the file

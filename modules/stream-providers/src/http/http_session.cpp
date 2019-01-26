@@ -78,11 +78,11 @@ namespace stream_cloud {
                     return ;
 
                 // See if it is a WebSocket Upgrade
-                if (websocket::is_upgrade(req_)) {
+               /* if (websocket::is_upgrade(req_)) {
                     // Create a WebSocket websocket_session by transferring the socket
                     std::make_shared<websocket_session>(std::move(socket_), handle_processing)->do_accept(std::move(req_));
                     return;
-                }
+                }*/
 
                 // Send the response
                 handle_processing(std::move(req_), shared_from_this());
