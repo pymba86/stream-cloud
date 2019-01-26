@@ -30,7 +30,8 @@ namespace stream_cloud {
                     data_provider(ctx, "http"),
                     pimpl(new impl) {
 
-                auto const address_ = boost::asio::ip::make_address("127.0.0.1");
+                auto string_ip = ctx->config()["http-ip"].as<std::string>();
+                auto const address_ = boost::asio::ip::make_address(string_ip);
 
                 auto string_port = ctx->config()["http-port"].as<std::string>();
                 auto dir_path = ctx->config()["http-dir"].as<std::string>();

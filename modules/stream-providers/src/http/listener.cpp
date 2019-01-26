@@ -199,8 +199,13 @@ namespace stream_cloud {
                     sub_domain = {};
                     root_path = *doc_root_;
                 } else {
-                    sub_domain =  host.substr(0, pos_domain).to_string();
-                    root_path =  *doc_root_ + "/" + sub_domain;
+                    sub_domain = host.substr(0, pos_domain).to_string();
+                    if (sub_domain == "manager") {
+                        root_path = *doc_root_ + "/" + sub_domain;
+                    } else {
+                        root_path = *doc_root_;
+                        sub_domain = {};
+                    }
                 }
 
                 std::string path;
@@ -208,7 +213,7 @@ namespace stream_cloud {
                 if (req.target().rfind(".") == boost::beast::string_view::npos) {
                     path = path_cat(root_path, "/index.html");
                 } else {
-                    path  = path_cat(root_path, req.target());
+                    path = path_cat(root_path, req.target());
                 }
 
 

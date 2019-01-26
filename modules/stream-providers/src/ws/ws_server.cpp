@@ -31,7 +31,8 @@ namespace stream_cloud {
                                  std::initializer_list<actor::actor_address> pipe) : data_provider(ctx, "ws"),
                                                                                      pimpl(new impl) {
 
-                boost::asio::ip::address address_ = boost::asio::ip::make_address("127.0.0.1");
+                auto string_ip = ctx->config()["ws-ip"].as<std::string>();
+                boost::asio::ip::address address_ = boost::asio::ip::make_address(string_ip);
 
                 auto string_port = ctx->config()["ws-port"].as<std::string>();
                 auto tmp_port = std::stoul(string_port);
