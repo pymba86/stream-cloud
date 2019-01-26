@@ -356,12 +356,7 @@ namespace stream_cloud {
                             // Отправляем сообщение менеджеру
                             auto ws_response = new api::web_socket(manager_transport_id);
 
-                            api::json_rpc::request_message request_manager_message;
-                            request_manager_message.method = task.request.method;
-                            request_manager_message.params = task.request.params;
-                            request_manager_message.metadata = task.request.metadata;
-
-                            ws_response->body = api::json_rpc::serialize(request_manager_message);
+                            ws_response->body = api::json_rpc::serialize(task.request);
 
                             ctx->addresses("ws")->send(
                                     messaging::make_message(
