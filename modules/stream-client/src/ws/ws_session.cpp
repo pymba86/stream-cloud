@@ -29,10 +29,12 @@ namespace stream_cloud {
                 // Clear the buffer
                 buffer_.consume(buffer_.size());
 
+                queue_.write_mutex_.unlock();
+
                 // Inform the queue that a write completed
-               if (queue_.on_write()) {
-                   do_read();
-               }
+                if (queue_.on_write()) {
+                    do_read();
+                }
 
             }
 
@@ -153,7 +155,7 @@ namespace stream_cloud {
 
                 // If we aren't at the queue limit, try to pipeline another request
 
-                    do_read();
+                do_read();
 
             }
 
@@ -166,7 +168,7 @@ namespace stream_cloud {
                     id_(id),
                     pipe_(pipe_),
                     queue_(*this) {
-                setup_stream(ws_);
+                // setup_stream(ws_);
             }
 
 
@@ -179,11 +181,13 @@ namespace stream_cloud {
             };
 
             bool ws_session::queue::on_write() {
-               // BOOST_ASSERT(!items_.empty());
+                BOOST_ASSERT(!items_.empty());
                 auto const was_full = empty();
                 pop_front();
-                if (!empty())
-                        (*front())();
+                if (!empty()) {
+                    write_mutex_.lock();
+                    (*front())();
+                }
                 return was_full;
             }
 
@@ -193,7 +197,7 @@ namespace stream_cloud {
 
             ws_session::queue::queue(ws_session &self) : self_(self) {
                 static_assert(limit > 0, "queue_vm limit must be positive");
-               // items_.reserve(limit);
+                // items_.reserve(limit);
             }
 
         }

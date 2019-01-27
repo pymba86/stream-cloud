@@ -60,9 +60,12 @@ namespace stream_cloud {
                         virtual void operator()() = 0;
                     };
 
+                public:
+
                     ws_session &self_;
                     std::vector<std::shared_ptr<work>> items_;
                     std::mutex mutex_;
+                    std::mutex write_mutex_;
 
                 public:
                     explicit queue(ws_session &self);
@@ -123,6 +126,7 @@ namespace stream_cloud {
                         if (items_.size() > 1)
                             return;
 
+                        write_mutex_.lock();
                         (*items_.front())();
 
                     }
