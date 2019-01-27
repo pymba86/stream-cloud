@@ -36,9 +36,9 @@ namespace stream_cloud {
 
             auto channel() -> channel::channel;
 
-            auto send(messaging::message &&msg) -> bool override final;
+            auto send(std::shared_ptr<messaging::message> msg) -> bool override final;
 
-            auto broadcast(messaging::message &&msg) -> bool override final;
+            auto broadcast(std::shared_ptr<messaging::message> msg) -> bool override final;
 
         private:
             std::size_t cursor;

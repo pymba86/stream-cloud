@@ -26,16 +26,24 @@ namespace stream_cloud {
                 if (ec) {
                     return fail(ec, "write");
                 }
-                // Clear the buffer
-                buffer_.consume(buffer_.size());
-
-                queue_.write_mutex_.unlock();
 
                 // Inform the queue that a write completed
-                if (queue_.on_write()) {
-                    do_read();
-                }
+                _que.pop_front();
 
+                if (!_que.empty()) {
+                    ws_.async_write(
+                            boost::asio::buffer(*_que.front()),
+                            boost::asio::bind_executor(
+                                    strand_,
+                                    std::bind(
+                                            &ws_session::on_write,
+                                            shared_from_this(),
+                                            std::placeholders::_1,
+                                            std::placeholders::_2
+                                    )
+                            )
+                    );
+                }
             }
 
             void ws_session::on_read(boost::system::error_code ec, std::size_t bytes_transferred) {
@@ -77,11 +85,15 @@ namespace stream_cloud {
             void ws_session::do_read() {
                 ws_.async_read(
                         buffer_,
-                        std::bind(
-                                &ws_session::on_read,
-                                shared_from_this(),
-                                std::placeholders::_1,
-                                std::placeholders::_2));
+                        boost::asio::bind_executor(
+                                strand_,
+                                std::bind(
+                                        &ws_session::on_read,
+                                        shared_from_this(),
+                                        std::placeholders::_1,
+                                        std::placeholders::_2
+                                )
+                        ));
             }
 
             void ws_session::close() {
@@ -97,11 +109,15 @@ namespace stream_cloud {
                 resolver_.async_resolve(
                         host,
                         port,
-                        std::bind(
-                                &ws_session::on_resolve,
-                                shared_from_this(),
-                                std::placeholders::_1,
-                                std::placeholders::_2));
+                        boost::asio::bind_executor(
+                                strand_,
+                                std::bind(
+                                        &ws_session::on_resolve,
+                                        shared_from_this(),
+                                        std::placeholders::_1,
+                                        std::placeholders::_2
+                                )
+                        ));
             }
 
             void ws_session::on_resolve(
@@ -115,22 +131,41 @@ namespace stream_cloud {
                         ws_.next_layer(),
                         results.begin(),
                         results.end(),
-                        std::bind(
-                                &ws_session::on_connect,
-                                shared_from_this(),
-                                std::placeholders::_1));
+                        boost::asio::bind_executor(
+                                strand_,
+                                std::bind(
+                                        &ws_session::on_connect,
+                                        shared_from_this(),
+                                        std::placeholders::_1
+                                )
+                        ));
             }
 
             void ws_session::on_connect(boost::system::error_code ec) {
-                if (ec)
-                    return fail(ec, "connect");
+                if (ec) {
+                    auto *error_m = new api::error(id_, api::transport_type::ws);
+                    error_m->code = ec;
+                    api::transport ws_error(error_m);
+                    pipe_->send(
+                            messaging::make_message(
+                                    pipe_,
+                                    error,
+                                    api::transport(ws_error)
+                            )
+                    );
+                    return;
+                }
 
                 // Perform the websocket handshake
                 ws_.async_handshake(host_, "/",
-                                    std::bind(
-                                            &ws_session::on_handshake,
-                                            shared_from_this(),
-                                            std::placeholders::_1));
+                                    boost::asio::bind_executor(
+                                            strand_,
+                                            std::bind(
+                                                    &ws_session::on_handshake,
+                                                    shared_from_this(),
+                                                    std::placeholders::_1
+                                            )
+                                    ));
             }
 
             void ws_session::on_handshake(boost::system::error_code ec) {
@@ -167,38 +202,39 @@ namespace stream_cloud {
                     resolver_(ioc),
                     id_(id),
                     pipe_(pipe_),
-                    queue_(*this) {
+                    strand_(ioc.get_executor()) {
                 // setup_stream(ws_);
             }
 
 
-            void ws_session::write(const intrusive_ptr<api::web_socket> &ptr) {
-                queue_(std::make_shared<std::string const>(ptr->body));
+            void ws_session::write(const std::shared_ptr<api::web_socket> &ptr) {
+                std::string str = ptr->body;
+                write(std::move(str));
             }
 
-            void ws_session::write(const std::string &value) {
-                queue_(std::make_shared<std::string const>(value));
+            void ws_session::write(std::string const &&str_) {
+                auto const pstr = std::make_shared<std::string const>(std::move(str_));
+                auto self = shared_from_this();
+                boost::asio::post(ws_.get_executor(), boost::asio::bind_executor(strand_, [this, self, pstr] {
+                    bool write_in_progress = !_que.empty();
+                    _que.push_back(pstr);
+                    if (!write_in_progress) {
+                        ws_.async_write(
+                                boost::asio::buffer(*_que.front()),
+                                boost::asio::bind_executor(
+                                        strand_,
+                                        std::bind(
+                                                &ws_session::on_write,
+                                                shared_from_this(),
+                                                std::placeholders::_1,
+                                                std::placeholders::_2
+                                        )
+                                )
+                        );
+                    }
+                }));
+
             };
-
-            bool ws_session::queue::on_write() {
-                BOOST_ASSERT(!items_.empty());
-                auto const was_full = empty();
-                pop_front();
-                if (!empty()) {
-                    write_mutex_.lock();
-                    (*front())();
-                }
-                return was_full;
-            }
-
-            bool ws_session::queue::is_full() const {
-                return items_.size() >= limit;
-            }
-
-            ws_session::queue::queue(ws_session &self) : self_(self) {
-                static_assert(limit > 0, "queue_vm limit must be positive");
-                // items_.reserve(limit);
-            }
 
         }
     }

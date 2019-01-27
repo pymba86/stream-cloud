@@ -43,7 +43,7 @@ namespace stream_cloud {
                     behavior::make_handler("signup", [this](behavior::context &ctx) -> void {
                         // Добавляем профиль
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto login = task.request.params["login"].as<std::string>();
                         auto password = task.request.params["password"].as<std::string>();
@@ -89,7 +89,7 @@ namespace stream_cloud {
                     behavior::make_handler("login", [this](behavior::context &ctx) -> void {
                         // Получаем profile-key передач логин и пароль
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto login_param = task.request.params["login"].as<std::string>();
                         auto password_param = task.request.params["password"].as<std::string>();
@@ -145,7 +145,7 @@ namespace stream_cloud {
                     behavior::make_handler("auth", [this](behavior::context &ctx) -> void {
                         // Проверка профиля по базе
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto profile_key = task.request.metadata["profile-key"].as<std::string>();
 

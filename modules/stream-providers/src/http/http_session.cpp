@@ -1,7 +1,6 @@
 #include "http_session.hpp"
 #include <boost/beast/core/string.hpp>
 #include <iostream>
-#include <intrusive_ptr.hpp>
 #include "websocket_session.hpp"
 
 namespace stream_cloud {
@@ -140,7 +139,7 @@ namespace stream_cloud {
                                                  std::placeholders::_1)));
             }
 
-            void http_session::write(const intrusive_ptr<api::http>& ptr) {
+            void http_session::write(const std::shared_ptr<api::http>& ptr) {
 
                 http::response<http::string_body> res{http::status::ok, 11};
                 res.body() = ptr->body();

@@ -7,7 +7,6 @@
 #include <transport_base.hpp>
 #include <http.hpp>
 #include <boost/format.hpp>
-#include <intrusive_ptr.hpp>
 #include <transport_base.hpp>
 #include "websocket.hpp"
 #include <thread>
@@ -36,7 +35,7 @@ namespace stream_cloud {
                     behavior::make_handler(
                             "settings",
                             [this](behavior::context &ctx) -> void {
-                                auto transport = ctx.message().body<api::transport>();
+                                auto transport = ctx.message()->body<api::transport>();
                                 auto transport_type = transport->type();
 
                                 if (transport_type == api::transport_type::ws) {

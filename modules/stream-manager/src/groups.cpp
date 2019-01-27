@@ -27,7 +27,7 @@ namespace stream_cloud {
                     behavior::make_handler("add", [this](behavior::context &ctx) -> void {
                         // Добавляет новую группу
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto key = task.request.params["key"].as<std::string>();
                         auto name = task.request.params["name"].as<std::string>();
@@ -46,7 +46,7 @@ namespace stream_cloud {
 
                                 response_message.result = true;
 
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -73,7 +73,7 @@ namespace stream_cloud {
                     behavior::make_handler("delete", [this](behavior::context &ctx) -> void {
                         // Удаляет группу
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto key = task.request.params["key"].as<std::string>();
 
@@ -90,7 +90,7 @@ namespace stream_cloud {
 
                                 response_message.result = true;
 
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -118,7 +118,7 @@ namespace stream_cloud {
                     behavior::make_handler("list", [this](behavior::context &ctx) -> void {
                         // Получить список пользователей
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
@@ -138,7 +138,7 @@ namespace stream_cloud {
 
                             response_message.result = users_list;
 
-                        } catch (exception &e) {
+                        } catch (std::exception &e) {
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
                                     e.what());

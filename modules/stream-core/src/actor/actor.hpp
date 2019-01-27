@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <intrusive_ptr.hpp>
 #include <actor/abstract_actor.hpp>
 
 namespace stream_cloud {
@@ -19,13 +18,13 @@ namespace stream_cloud {
             actor &operator=(actor &&a) = default;
 
             template<class T>
-            explicit  actor(intrusive_ptr <T> ptr) : heart(std::move(ptr)) {}
+            explicit  actor(std::shared_ptr <T> ptr) : heart(std::move(ptr)) {}
 
             template<class T>
             explicit actor(T *ptr) : heart(ptr) {}
 
             template<class T>
-            actor &operator=(intrusive_ptr <T> ptr) {
+            actor &operator=(std::shared_ptr <T> ptr) {
                 actor tmp{std::move(ptr)};
                 swap(tmp);
                 return *this;
@@ -60,7 +59,7 @@ namespace stream_cloud {
 
             void swap(actor &) noexcept;
 
-            intrusive_ptr<abstract_actor> heart;
+            std::shared_ptr<abstract_actor> heart;
         };
     }
 }

@@ -25,11 +25,11 @@ namespace stream_cloud {
 
             virtual void shutdown() = 0;
 
-            bool send(messaging::message &&, executor::execution_device *) override;
+            bool send(std::shared_ptr<messaging::message>, executor::execution_device *) override;
 
             void launch(executor::execution_device *, bool) override;
 
-            bool send(message &&) override;
+            bool send(std::shared_ptr<messaging::message>) override;
 
         };
     }

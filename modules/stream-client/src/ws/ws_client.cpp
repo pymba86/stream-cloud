@@ -51,10 +51,17 @@ namespace stream_cloud {
                         behavior::make_handler(
                                 "write",
                                 [this](behavior::context &ctx) -> void {
-                                    auto t = ctx.message().body<api::transport>();
-                                    std::unique_ptr<api::web_socket> transport(
-                                            static_cast<api::web_socket *>(t.release()));
-                                    pimpl->session_->write(std::move(transport));
+                                    auto t = ctx.message()->body<api::transport>();
+                                    pimpl->session_->write(std::static_pointer_cast<api::web_socket>(t));
+                                }
+                        )
+                );
+
+                attach(
+                        behavior::make_handler(
+                                "reconnect",
+                                [this](behavior::context &ctx) -> void {
+                                    pimpl->session_->run(pimpl->session_->host_, pimpl->session_->port_);
                                 }
                         )
                 );
@@ -72,7 +79,7 @@ namespace stream_cloud {
                         behavior::make_handler(
                                 "set_closing_message",
                                 [this](behavior::context& ctx) -> void {
-                                    auto text = ctx.message().body<std::string>();
+                                    auto text = ctx.message()->body<std::string>();
                                     pimpl->closing_message = text;
                                 }
                         )
@@ -94,7 +101,7 @@ namespace stream_cloud {
                 if (text.empty()) {
                     pimpl->session_->close();
                 } else {
-                    pimpl->session_->write(text);
+                    pimpl->session_->write(std::move(text));
                 }
 
             }

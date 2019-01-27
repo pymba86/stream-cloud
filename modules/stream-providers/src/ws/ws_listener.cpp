@@ -78,7 +78,7 @@ namespace stream_cloud {
                 do_accept();
             }
 
-            void ws_listener::write(const intrusive_ptr<api::web_socket> &ptr) {
+            void ws_listener::write(const std::shared_ptr<api::web_socket> &ptr) {
 
                 if (storage_sessions.count(ptr->id())) {
                     auto session = storage_sessions.at(ptr->id());
@@ -101,7 +101,7 @@ namespace stream_cloud {
 
             }
 
-            void ws_listener::close(const intrusive_ptr<api::web_socket> &ptr) {
+            void ws_listener::close(const std::shared_ptr<api::web_socket> &ptr) {
 
                 if (storage_sessions.count(ptr->id())) {
                     auto session = storage_sessions.at(ptr->id());
@@ -111,7 +111,7 @@ namespace stream_cloud {
 
             }
 
-            void ws_listener::remove(const intrusive_ptr<api::web_socket> &ptr) {
+            void ws_listener::remove(const std::shared_ptr<api::web_socket> &ptr) {
                 storage_sessions.erase(ptr->id());
             }
 

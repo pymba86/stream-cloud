@@ -46,91 +46,6 @@ namespace stream_cloud {
 
             class ws_session : public std::enable_shared_from_this<ws_session> {
 
-                // This queue_vm is used for HTTP pipelining.
-                class queue final {
-                    enum {
-                        // Maximum number of responses we will queue
-                                limit = 8
-                    };
-
-                    // The type-erased, saved work item
-                    struct work {
-                        virtual ~work() = default;
-
-                        virtual void operator()() = 0;
-                    };
-
-                public:
-
-                    ws_session &self_;
-                    std::vector<std::shared_ptr<work>> items_;
-                    std::mutex mutex_;
-                    std::mutex write_mutex_;
-
-                public:
-                    explicit queue(ws_session &self);
-
-                    // Returns `true` if we have reached the queue_vm limit
-                    bool is_full() const;
-
-                    // Called when a message finishes sending
-                    // Returns `true` if the caller should initiate a read
-                    bool on_write();
-
-                    void pop_front() {
-                        std::lock_guard<std::mutex> lock{mutex_};
-                        items_.erase(items_.begin());
-                    };
-
-                    std::shared_ptr<work>& front() {
-                        std::lock_guard<std::mutex> lock{mutex_};
-                        return items_.front();
-                    }
-
-                    bool empty() {
-                        std::lock_guard<std::mutex> lock{mutex_};
-                        return items_.empty();
-                    };
-
-                    // Called by the HTTP handler to send a response.
-                    void operator()(std::shared_ptr<std::string const> const &msg) {
-                        // This holds a work item
-                        struct work_impl final : work {
-                            ws_session &self_;
-                            std::shared_ptr<std::string const> msg_;
-
-                            work_impl(
-                                    ws_session &self,
-                                    std::shared_ptr<std::string const> msg)
-                                    : self_(self), msg_(std::move(msg)) {
-                            }
-
-                            void
-                            operator()() { // self_.ws_.
-                                self_.ws_.async_write(
-                                        boost::asio::buffer(std::string(*msg_)),
-                                        [sp = self_.shared_from_this()](
-                                                boost::system::error_code ec, std::size_t bytes)
-                                        {
-                                            sp->on_write(ec, bytes);
-                                        });
-                            }
-                        };
-
-                        std::lock_guard<std::mutex> lock{mutex_};
-
-                        // Allocate and store the work
-                        items_.push_back(std::make_shared<work_impl>(self_, msg));
-
-                        // If there was no previous work, start this one
-                        if (items_.size() > 1)
-                            return;
-
-                        write_mutex_.lock();
-                        (*items_.front())();
-
-                    }
-                };
 
             public:
                 explicit ws_session(boost::asio::io_context &ioc,
@@ -140,9 +55,9 @@ namespace stream_cloud {
 
                 void run(const std::string &host_, const std::string &text_);
 
-                void write(const intrusive_ptr<api::web_socket> &ptr);
+                void write(const std::shared_ptr<api::web_socket> &ptr);
 
-                void write(const std::string &value);
+                void write(std::string const&& str_);
 
                 void do_read();
 
@@ -167,11 +82,14 @@ namespace stream_cloud {
 
                 websocket::stream<tcp::socket> ws_;
                 tcp::resolver resolver_;
-                boost::beast::flat_buffer buffer_;
+                boost::beast::multi_buffer buffer_;
+                boost::asio::strand<boost::asio::io_context::executor_type> strand_;
                 actor::actor_address pipe_;
-                queue queue_;
                 std::string host_;
                 std::string port_;
+                std::mutex mutex_;
+
+                std::deque<std::shared_ptr<std::string const>> _que {};
             };
 
 

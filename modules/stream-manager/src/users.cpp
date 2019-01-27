@@ -61,7 +61,7 @@ namespace stream_cloud {
             attach(
                     behavior::make_handler("add", [this](behavior::context &ctx) -> void {
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto login = task.request.params["login"].as<std::string>();
                         auto password = task.request.params["password"].as<std::string>();
@@ -80,7 +80,7 @@ namespace stream_cloud {
 
                                 response_message.result = true;
 
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -107,7 +107,7 @@ namespace stream_cloud {
                     behavior::make_handler("delete", [this](behavior::context &ctx) -> void {
                         // Удаляет пользователя
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto login = task.request.params["login"].as<std::string>();
 
@@ -126,7 +126,7 @@ namespace stream_cloud {
 
                                 pimpl->remove_auth_login(login);
 
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -154,7 +154,7 @@ namespace stream_cloud {
                     behavior::make_handler("list", [this](behavior::context &ctx) -> void {
                         // Получить список пользователей
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto profile_key = task.storage["profile.key"];
 
@@ -182,7 +182,7 @@ namespace stream_cloud {
 
                             response_message.result = users_list;
 
-                        } catch (exception &e) {
+                        } catch (std::exception &e) {
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
                                     e.what());
@@ -205,7 +205,7 @@ namespace stream_cloud {
                     behavior::make_handler("login", [this](behavior::context &ctx) -> void {
                         // Получаем user-key передав логин и пароль
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto login_param = task.request.params["login"].as<std::string>();
                         auto password_param = task.request.params["password"].as<std::string>();
@@ -223,9 +223,9 @@ namespace stream_cloud {
                             try {
                                 pimpl->db_ << "select login, password from users where login = ? limit 1;"
                                            << login_param
-                                           >> [&](unique_ptr<string> login_p, unique_ptr<string> password_p) {
-                                               login = login_p ? *login_p : string();
-                                               password = password_p ? *password_p : string();
+                                           >> [&](std::unique_ptr<std::string> login_p, std::unique_ptr<std::string> password_p) {
+                                               login = login_p ? *login_p : std::string();
+                                               password = password_p ? *password_p : std::string();
                                            };
 
                                 std::string user_key = login_param + "." + password_param;
@@ -242,7 +242,7 @@ namespace stream_cloud {
                                             api::json_rpc::error_code::unknown_error_code,
                                             "login or password is incorrect");
                                 }
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -269,7 +269,7 @@ namespace stream_cloud {
                     behavior::make_handler("auth", [this](behavior::context &ctx) -> void {
                         // Проверка пользователя по базе
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto user_key = task.request.metadata["user-key"].as<std::string>();
                         auto profile_key = task.storage["profile.key"];
@@ -299,9 +299,9 @@ namespace stream_cloud {
                             try {
                                 pimpl->db_ << "select login, password from users where login = ? limit 1;"
                                            << user[0]
-                                           >> [&](unique_ptr<string> login_p, unique_ptr<string> password_p) {
-                                               login = login_p ? *login_p : string();
-                                               password = password_p ? *password_p : string();
+                                           >> [&](std::unique_ptr<std::string> login_p, std::unique_ptr<std::string> password_p) {
+                                               login = login_p ? *login_p : std::string();
+                                               password = password_p ? *password_p : std::string();
                                            };
 
                                 if (user[1] == password) {
@@ -338,7 +338,7 @@ namespace stream_cloud {
                                             )
                                     );
                                 }
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 auto ws_response = new api::web_socket(task.transport_id_);
                                 api::json_rpc::response_message response_message;
                                 response_message.id = task.request.id;

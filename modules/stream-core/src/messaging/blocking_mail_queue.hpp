@@ -14,22 +14,22 @@ namespace stream_cloud {
 
         class blocking_mail_queue final : public mail_box {
         public:
-            using cache_type = std::list<message>;
+            using cache_type = std::list<std::shared_ptr<messaging::message>>;
 
-            using queue_base_type = std::list<message>;
+            using queue_base_type = std::list<std::shared_ptr<messaging::message>>;
 
             using unique_lock = std::unique_lock<std::mutex>;
             using lock_guard = std::lock_guard<std::mutex>;
             blocking_mail_queue();
             ~blocking_mail_queue();
 
-            enqueue_result put(message&& m);
+            enqueue_result put(std::shared_ptr<messaging::message> m);
 
-            message get();
+            std::shared_ptr<messaging::message> get();
 
-            bool push_to_cache(messaging::message &&msg_ptr);
+            bool push_to_cache(std::shared_ptr<messaging::message> msg_ptr);
 
-            messaging::message pop_to_cache();
+            std::shared_ptr<messaging::message> pop_to_cache();
 
         private:
 

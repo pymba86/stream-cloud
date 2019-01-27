@@ -28,17 +28,17 @@ namespace stream_cloud {
             return *ptr;
         }
 
-        context::context(context_t *ptr, messaging::message &&msg) :
+        context::context(context_t *ptr, std::shared_ptr<messaging::message> msg) :
                 ptr(ptr),
                 msg(std::move(msg)) {
 
         }
 
-        messaging::message& context::message() {
+        std::shared_ptr<messaging::message> context::message() {
             return msg; /// TODO hack
         }
 
-        const messaging::message &context::message() const {
+        const std::shared_ptr<messaging::message> context::message() const {
             return msg;
         }
     }

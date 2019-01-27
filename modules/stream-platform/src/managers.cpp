@@ -56,7 +56,7 @@ namespace stream_cloud {
             attach(
                     behavior::make_handler("add", [this](behavior::context &ctx) -> void {
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto name = task.request.params["name"].as<std::string>();
                         auto profile_login = task.storage["profile.login"];
@@ -117,7 +117,7 @@ namespace stream_cloud {
                     behavior::make_handler("delete", [this](behavior::context &ctx) -> void {
                         // Удаление менеджера
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto key = task.request.params["key"].as<std::string>();
                         auto profile_login = task.storage["profile.login"];
@@ -197,7 +197,7 @@ namespace stream_cloud {
                     behavior::make_handler("list", [this](behavior::context &ctx) -> void {
                         // Получить список менеджеров у пользователя
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto profile_login = task.storage["profile.login"];
 
@@ -243,12 +243,11 @@ namespace stream_cloud {
             );
 
 
-
             attach(
                     behavior::make_handler("connect", [this](behavior::context &ctx) -> void {
                         // Подключаемя к платформе
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto key = task.request.params["key"].as<std::string>();
                         auto profile_login = task.storage["profile.login"];
@@ -258,39 +257,34 @@ namespace stream_cloud {
                         api::json_rpc::response_message response_message;
                         response_message.id = task.request.id;
 
-                        if (pimpl->is_reg_manager(key)) {
-                            response_message.error = api::json_rpc::response_error(
-                                    api::json_rpc::error_code::unknown_error_code,
-                                    "manager already connect");
-                        } else {
 
-                            try {
+                        try {
 
-                                // Проверяем на наличие
-                                int count_managers_key = 0;
-                                pimpl->db_ << "select count(*) from managers where key = ? and profile_login = ?"
-                                           << key
-                                           << profile_login
-                                           >> count_managers_key;
+                            // Проверяем на наличие
+                            int count_managers_key = 0;
+                            pimpl->db_ << "select count(*) from managers where key = ? and profile_login = ?"
+                                       << key
+                                       << profile_login
+                                       >> count_managers_key;
 
-                                if (count_managers_key > 0) {
+                            if (count_managers_key > 0) {
 
-                                    response_message.result = true;
+                                response_message.result = true;
 
-                                    pimpl->add_reg_manager(key, task.transport_id_);
+                                pimpl->add_reg_manager(key, task.transport_id_);
 
-                                } else {
-                                    response_message.error = api::json_rpc::response_error(
-                                            api::json_rpc::error_code::unknown_error_code,
-                                            "manager not found");
-                                }
-
-                            } catch (exception &e) {
+                            } else {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
-                                        e.what());
+                                        "manager not found");
                             }
+
+                        } catch (exception &e) {
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    e.what());
                         }
+
 
                         ws_response->body = api::json_rpc::serialize(response_message);
 
@@ -308,7 +302,7 @@ namespace stream_cloud {
                     behavior::make_handler("disconnect", [this](behavior::context &ctx) -> void {
                         // Отключаемся от платформы
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto key = task.request.params["key"].as<std::string>();
                         auto profile_login = task.storage["profile.login"];
@@ -343,7 +337,7 @@ namespace stream_cloud {
             attach(
                     behavior::make_handler("request", [this](behavior::context &ctx) -> void {
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto manager_key = task.request.metadata["manager-key"].get<std::string>();
 
@@ -392,7 +386,7 @@ namespace stream_cloud {
             attach(
                     behavior::make_handler("response", [this](behavior::context &ctx) -> void {
 
-                        auto& transport = ctx.message().body<api::transport>();
+                        auto &transport = ctx.message()->body<api::transport>();
 
                         auto *ws = static_cast<api::web_socket *>(transport.get());
 

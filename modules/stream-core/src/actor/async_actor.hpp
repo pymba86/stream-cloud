@@ -21,9 +21,9 @@ namespace stream_cloud {
 
             using mailbox_type = messaging::mail_box;
 
-            bool send(messaging::message&&) final;
+            bool send(std::shared_ptr<messaging::message>) final;
 
-            bool send(messaging::message&&, executor::execution_device *) final;
+            bool send(std::shared_ptr<messaging::message>, executor::execution_device *) final;
 
             void launch(executor::execution_device *, bool) final;
 
@@ -40,15 +40,15 @@ namespace stream_cloud {
 
 // message processing -----------------------------------------------------
 
-            messaging::message next_message();
+            std::shared_ptr<messaging::message> next_message();
 
             bool has_next_message();
 
             mailbox_type &mailbox();
 
-            bool push_to_cache(messaging::message&&);
+            bool push_to_cache(std::shared_ptr<messaging::message>);
 
-            messaging::message pop_to_cache();
+            std::shared_ptr<messaging::message> pop_to_cache();
 
 // ----------------------------------------------------- message processing
 

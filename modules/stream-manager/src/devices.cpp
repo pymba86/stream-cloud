@@ -81,7 +81,7 @@ namespace stream_cloud {
                     behavior::make_handler("add", [this](behavior::context &ctx) -> void {
                         // Добавляем устройство
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto name = task.request.params["name"].as<std::string>();
                         auto user_login = task.storage["user.login"];
@@ -102,7 +102,7 @@ namespace stream_cloud {
 
                                 response_message.result = key;
 
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -129,7 +129,7 @@ namespace stream_cloud {
                     behavior::make_handler("delete", [this](behavior::context &ctx) -> void {
                         // Удаление устройства
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto key = task.request.params["key"].as<std::string>();
 
@@ -146,7 +146,7 @@ namespace stream_cloud {
                                 response_message.result = true;
 
 
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -175,7 +175,7 @@ namespace stream_cloud {
                     behavior::make_handler("list", [this](behavior::context &ctx) -> void {
                         // Получить список устройств
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);
@@ -198,7 +198,7 @@ namespace stream_cloud {
 
                             response_message.result = managers_list;
 
-                        } catch (exception &e) {
+                        } catch (std::exception &e) {
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
                                     e.what());
@@ -221,7 +221,7 @@ namespace stream_cloud {
                     behavior::make_handler("detail", [this](behavior::context &ctx) -> void {
                         // Получить детали устройства
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto key = task.request.params["key"].as<std::string>();
 
@@ -264,7 +264,7 @@ namespace stream_cloud {
 
                                 response_message.result = device_info;
 
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -297,7 +297,7 @@ namespace stream_cloud {
                         //  на проверку принадлежности хоть к одной группе
                         // Отправить команду в devices:request
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         if (api::json_rpc::contains(task.request.metadata, "device-key")) {
 
@@ -362,7 +362,7 @@ namespace stream_cloud {
                     behavior::make_handler("connect", [this](behavior::context &ctx) -> void {
                         // Подключение устройство к менеджеру
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto key = task.request.params["key"].as<std::string>();
                         auto actions = task.request.params["actions"].as<api::json::json_array>();
@@ -373,61 +373,55 @@ namespace stream_cloud {
                         api::json_rpc::response_message response_message;
                         response_message.id = task.request.id;
 
-                        if (pimpl->is_reg_device(key)) {
-                            response_message.error = api::json_rpc::response_error(
-                                    api::json_rpc::error_code::unknown_error_code,
-                                    "device already connect");
-                        } else {
+                        try {
 
-                            try {
+                            // Проверяем на наличие
+                            int count_device_key = 0;
+                            pimpl->db_ << "select count(*) from devices where key = ?;"
+                                       << key
+                                       >> count_device_key;
 
-                                // Проверяем на наличие
-                                int count_device_key = 0;
-                                pimpl->db_ << "select count(*) from devices where key = ?;"
-                                           << key
-                                           >> count_device_key;
+                            if (count_device_key > 0) {
 
-                                if (count_device_key > 0) {
+                                if (!actions.empty() || !variables.empty()) {
 
-                                    if (!actions.empty() || !variables.empty()) {
+                                    response_message.result = true;
 
-                                        response_message.result = true;
+                                    // Добавляем действия устройства
+                                    std::unordered_set<std::string> device_actions;
 
-                                        // Добавляем действия устройства
-                                        std::unordered_set<std::string> device_actions;
-
-                                        for (auto const &action : actions) {
-                                            device_actions.emplace(action.as<std::string>());
-                                        }
-
-                                        // Добавляем переменные устройства
-                                        std::unordered_set<std::string> device_variables;
-
-                                        for (auto const &variable : variables) {
-                                            device_variables.emplace(variable.as<std::string>());
-                                        }
-
-                                        pimpl->add_reg_device(key, task.transport_id_, device_actions,
-                                                              device_variables);
-
-                                    } else {
-                                        response_message.error = api::json_rpc::response_error(
-                                                api::json_rpc::error_code::unknown_error_code,
-                                                "device control contains actions and/or variables");
+                                    for (auto const &action : actions) {
+                                        device_actions.emplace(action.as<std::string>());
                                     }
+
+                                    // Добавляем переменные устройства
+                                    std::unordered_set<std::string> device_variables;
+
+                                    for (auto const &variable : variables) {
+                                        device_variables.emplace(variable.as<std::string>());
+                                    }
+
+                                    pimpl->add_reg_device(key, task.transport_id_, device_actions,
+                                                          device_variables);
 
                                 } else {
                                     response_message.error = api::json_rpc::response_error(
                                             api::json_rpc::error_code::unknown_error_code,
-                                            "device not found");
+                                            "device control contains actions and/or variables");
                                 }
 
-                            } catch (exception &e) {
+                            } else {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
-                                        e.what());
+                                        "device not found");
                             }
+
+                        } catch (std::exception &e) {
+                            response_message.error = api::json_rpc::response_error(
+                                    api::json_rpc::error_code::unknown_error_code,
+                                    e.what());
                         }
+
 
                         ws_response->body = api::json_rpc::serialize(response_message);
 
@@ -445,13 +439,13 @@ namespace stream_cloud {
                     behavior::make_handler("disconnect", [this](behavior::context &ctx) -> void {
                         // Отключаемся от менеждера
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto key = task.request.params["key"].as<std::string>();
 
                         try {
                             pimpl->remove_reg_device(key);
-                        } catch (exception &e) {
+                        } catch (std::exception &e) {
 
                             // Отправляем ответ
                             auto ws_response = new api::web_socket(task.transport_id_);
@@ -479,7 +473,7 @@ namespace stream_cloud {
                     behavior::make_handler("request", [this](behavior::context &ctx) -> void {
                         // Отправка команды на устройство
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto device_key = task.request.metadata["device-key"].as<std::string>();
 
@@ -490,7 +484,7 @@ namespace stream_cloud {
                             task.request.metadata["transport"] = task.transport_id_;
 
                             // Отправляем действие устройству - action
-                            auto *ws_response = new api::web_socket(device_transport_id);
+                            auto ws_response = new api::web_socket(device_transport_id);
 
                             api::json_rpc::request_message request_device_message;
                             request_device_message.id = task.request.id;
@@ -538,9 +532,9 @@ namespace stream_cloud {
                     behavior::make_handler("response", [this](behavior::context &ctx) -> void {
                         // Получение ответа от устройства
 
-                        auto &transport = ctx.message().body<api::transport>();
+                        auto transport = ctx.message()->body<api::transport>();
 
-                        auto *ws = static_cast<api::web_socket *>(transport.release());
+                        auto ws = std::static_pointer_cast<api::web_socket>(transport);
 
                         // Отправляем ответ от проверенного менеджера клиенту
                         api::json::json_map message{api::json::data{ws->body}};
@@ -554,7 +548,7 @@ namespace stream_cloud {
 
                                 message.erase("metadata");
 
-                                auto *ws_response = new api::web_socket(transports_id);
+                                auto ws_response = new api::web_socket(transports_id);
                                 ws_response->body = message.to_string();
 
                                 api::transport ws_res(ws_response);
@@ -563,7 +557,7 @@ namespace stream_cloud {
                                         messaging::make_message(
                                                 ctx->self(),
                                                 "write",
-                                                std::move(ws_res)
+                                                api::transport(ws_res)
                                         )
                                 );
                             }
@@ -575,18 +569,17 @@ namespace stream_cloud {
                     behavior::make_handler("notify", [this](behavior::context &ctx) -> void {
                         // Получение уведомления от устройства
 
-                        auto &transport = ctx.message().body<api::transport>();
+                        auto transport = ctx.message()->body<api::transport>();
 
-                        auto *ws = static_cast<api::web_socket *>(transport.release());
+                        auto ws = std::static_pointer_cast<api::web_socket>(transport);
 
                         api::json::json_map message{api::json::data{ws->body}};
 
-                        std::cout << "notify: " <<  message << std::endl;
+                        std::cout << "notify: " << message << std::endl;
 
                         if (api::json_rpc::is_notify(message)) {
 
                             auto device_key = message["metadata"]["device-key"].as<std::string>();
-
 
 
                             if (pimpl->is_reg_device(device_key)) {
@@ -612,7 +605,7 @@ namespace stream_cloud {
                     behavior::make_handler("subscribe", [this](behavior::context &ctx) -> void {
                         // Получение уведомления от устройства
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto device_key = task.request.params["device-key"].as<std::string>();
 
@@ -652,7 +645,7 @@ namespace stream_cloud {
                     behavior::make_handler("unsubscribe", [this](behavior::context &ctx) -> void {
                         // Получение уведомления от устройства
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto device_key = task.request.params["device-key"].as<std::string>();
 

@@ -12,7 +12,6 @@
 #include <transport_base.hpp>
 #include <http.hpp>
 #include <boost/format.hpp>
-#include <intrusive_ptr.hpp>
 #include <transport_base.hpp>
 #include "websocket.hpp"
 #include <thread>
@@ -59,12 +58,12 @@ namespace stream_cloud {
                             "dispatcher",
                             [this](behavior::context &ctx) -> void {
 
-                                auto &transport = ctx.message().body<api::transport>();
+                                auto transport = ctx.message()->body<api::transport>();
                                 auto transport_type = transport->type();
 
                                 if (transport_type == api::transport_type::ws) {
 
-                                    auto *ws = static_cast<api::web_socket *>(transport.get());
+                                    auto ws = std::static_pointer_cast<api::web_socket>(transport);
 
                                     api::json::json_map message{api::json::data{ws->body}};
 
@@ -162,31 +161,27 @@ namespace stream_cloud {
                                     } else if (api::json_rpc::is_response(message)) {
                                         // Ответ от устройства
 
-                                        auto *ws_response = new api::web_socket(ws->id());
+                                        auto ws_response = new api::web_socket(ws->id());
                                         ws_response->body = message.to_string();
-
-                                        api::transport ws_res(ws_response);
 
                                         ctx->addresses("devices")->send(
                                                 messaging::make_message(
                                                         ctx->self(),
                                                         "response",
-                                                        api::transport(ws_res)
+                                                        api::transport(ws_response)
                                                 )
                                         );
                                     } else if (api::json_rpc::is_notify(message)) {
                                         // Уведомление от устройства
 
-                                        auto *ws_notify = new api::web_socket(ws->id());
+                                        auto ws_notify = new api::web_socket(ws->id());
                                         ws_notify->body = message.to_string();
-
-                                        api::transport ws_not(ws_notify);
 
                                         ctx->addresses("devices")->send(
                                                 messaging::make_message(
                                                         ctx->self(),
                                                         "notify",
-                                                        api::transport(ws_not)
+                                                        api::transport(ws_notify)
                                                 )
                                         );
                                     }
@@ -205,7 +200,7 @@ namespace stream_cloud {
             attach(
                     behavior::make_handler("service", [this](behavior::context &ctx) -> void {
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto service_name = task.storage["service.name"];
                         auto method_name = task.storage["service.method"];
@@ -307,7 +302,7 @@ namespace stream_cloud {
                     behavior::make_handler("error", [this](behavior::context &ctx) -> void {
                         // Обработка ошибок
 
-                        auto &transport = ctx.message().body<api::transport>();
+                        auto &transport = ctx.message()->body<api::transport>();
                         auto transport_type = transport->type();
 
                         if (transport_type == api::transport_type::ws) {

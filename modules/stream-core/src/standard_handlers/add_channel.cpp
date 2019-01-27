@@ -14,7 +14,7 @@ namespace stream_cloud {
     add_channel::add_channel() : abstract_action("add_channel") {}
 
     void add_channel::invoke(behavior::context &request) {
-        auto channel_ = request.message().body<channel::channel>();
+        auto channel_ = request.message()->body<channel::channel>();
         if (channel_) {
             request->channel(channel_);
         } else {

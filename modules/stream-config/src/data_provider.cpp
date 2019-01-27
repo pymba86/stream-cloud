@@ -4,7 +4,7 @@
 
 namespace stream_cloud {
     namespace config {
-        bool data_provider::send(message &&message) {
+        bool data_provider::send(std::shared_ptr<messaging::message> message) {
             {
                 behavior::context context_(this, std::move(message));
                 reactions_.execute(context_); /** context processing */
@@ -18,7 +18,7 @@ namespace stream_cloud {
 
         }
 
-        bool data_provider::send(messaging::message &&message, executor::execution_device *) {
+        bool data_provider::send(std::shared_ptr<messaging::message> message, executor::execution_device *) {
             {
                 behavior::context context_(this, std::move(message));
                 reactions_.execute(context_); /** context processing */

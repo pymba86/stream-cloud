@@ -85,7 +85,7 @@ namespace stream_cloud {
             return channel::channel{static_cast<channel::abstract_channel *>(this)};
         }
 
-        auto abstract_group::send(messaging::message&& msg) -> bool {
+        auto abstract_group::send(std::shared_ptr<messaging::message> msg) -> bool {
             auto tmp_address = storage_space_.current_layer(entry_point_);
             if (!tmp_address.empty()) {
                 tmp_address[cursor]->send(std::move(msg));
@@ -98,11 +98,11 @@ namespace stream_cloud {
             return false;
         }
 
-        auto abstract_group::broadcast(messaging::message &&msg) -> bool {
+        auto abstract_group::broadcast(std::shared_ptr<messaging::message> msg) -> bool {
             auto tmp_address = storage_space_.current_layer(entry_point_);
             if (!tmp_address.empty()) {
                 for(auto& i : tmp_address){
-                    i->send(msg.clone());
+                    i->send(msg);
                 }
                 return true;
             }

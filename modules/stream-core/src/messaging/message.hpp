@@ -55,8 +55,8 @@ namespace stream_cloud {
         };
 
         template <typename T>
-        inline auto make_message(actor::actor_address sender_,const std::string &name, T &&data) -> message {
-            return message(sender_,name, std::forward<T>(data));
+        inline auto make_message(actor::actor_address sender_,const std::string &name, T &&data) -> std::shared_ptr<message> {
+            return std::make_shared<message>(sender_,name, std::forward<T>(data));
         }
     }
 }

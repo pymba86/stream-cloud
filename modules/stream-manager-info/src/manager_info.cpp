@@ -27,7 +27,7 @@ namespace stream_cloud {
                         // Получить ключ менеджера
                         // По дефолту берется из конфигурации
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         // Отправляем ответ
                         auto ws_response = new api::web_socket(task.transport_id_);

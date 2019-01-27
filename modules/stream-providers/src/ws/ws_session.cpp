@@ -15,13 +15,22 @@ namespace stream_cloud {
                 if (ec) {
                     return fail(ec, "write");
                 }
-                // Clear the buffer
-                buffer_.consume(buffer_.size());
-
                 // Inform the queue that a write completed
-                if (queue_.on_write()) {
-                    // Read another request
-                    do_read();
+                _que.pop_front();
+
+                if (!_que.empty()) {
+                    ws_.async_write(
+                            boost::asio::buffer(*_que.front()),
+                            boost::asio::bind_executor(
+                                    strand_,
+                                    std::bind(
+                                            &ws_session::on_write,
+                                            shared_from_this(),
+                                            std::placeholders::_1,
+                                            std::placeholders::_2
+                                    )
+                            )
+                    );
                 }
             }
 
@@ -68,9 +77,8 @@ namespace stream_cloud {
                 buffer_.consume(buffer_.size());
 
                 // If we aren't at the queue limit, try to pipeline another request
-                if (!queue_.is_full()) {
                     do_read();
-                }
+
             }
 
             void ws_session::do_read() {
@@ -116,14 +124,13 @@ namespace stream_cloud {
                     ws_(std::move(socket)),
                     strand_(ws_.get_executor()),
                     id_(id),
-                    main_pipe_(main_pipe),
-                    queue_(*this) {
+                    main_pipe_(main_pipe) {
                 setup_stream(ws_);
             }
 
-            void ws_session::write(const intrusive_ptr<api::web_socket> &ptr) {
-
-                queue_(std::make_shared<std::string const>(ptr->body));
+            void ws_session::write(const std::shared_ptr<api::web_socket> &ptr) {
+                std::string str = ptr->body;
+                write(std::move(str));
             }
 
             api::transport_id ws_session::id() const {
@@ -131,26 +138,27 @@ namespace stream_cloud {
             }
 
             void ws_session::write(const std::string &value) {
-                queue_(std::make_shared<std::string const>(value));
+                auto const pstr = std::make_shared<std::string const>(std::move(value));
+                auto self = shared_from_this();
+                boost::asio::post(ws_.get_executor(), boost::asio::bind_executor(strand_, [this, self, pstr] {
+                    bool write_in_progress = !_que.empty();
+                    _que.push_back(pstr);
+                    if (!write_in_progress) {
+                        ws_.async_write(
+                                boost::asio::buffer(*_que.front()),
+                                boost::asio::bind_executor(
+                                        strand_,
+                                        std::bind(
+                                                &ws_session::on_write,
+                                                shared_from_this(),
+                                                std::placeholders::_1,
+                                                std::placeholders::_2
+                                        )
+                                )
+                        );
+                    }
+                }));
             };
-
-            bool ws_session::queue::on_write() {
-                BOOST_ASSERT(!items_.empty());
-                auto const was_full = is_full();
-                items_.erase(items_.begin());
-                if (!items_.empty())
-                    (*items_.front())();
-                return was_full;
-            }
-
-            bool ws_session::queue::is_full() const {
-                return items_.size() >= limit;
-            }
-
-            ws_session::queue::queue(ws_session &self) : self_(self) {
-                static_assert(limit > 0, "queue_vm limit must be positive");
-                items_.reserve(limit);
-            }
 
         }
     }

@@ -21,7 +21,7 @@ namespace stream_cloud {
 
             {
 
-                messaging::message msg_ptr;
+                std::shared_ptr<messaging::message> msg_ptr;
                 for (size_t handled_msgs = 0; handled_msgs < max_throughput;) {
                     msg_ptr = pop_to_cache();
                     if (msg_ptr) {
@@ -50,7 +50,7 @@ namespace stream_cloud {
 
             //---------------------------------------------------------------------------
 
-            messaging::message msg_ptr = next_message();
+            std::shared_ptr<messaging::message> msg_ptr = next_message();
             while (msg_ptr) {
                 push_to_cache(std::move(msg_ptr));
                 msg_ptr = next_message();
@@ -65,7 +65,7 @@ namespace stream_cloud {
             return executor::executable_result::resume;
         }
 
-        bool async_actor::send(messaging::message && mep, executor::execution_device *e) {
+        bool async_actor::send(std::shared_ptr<messaging::message> mep, executor::execution_device *e) {
             mailbox().put(std::move(mep));
 
             if (e != nullptr) {
@@ -97,20 +97,20 @@ namespace stream_cloud {
             }
         }
 
-        bool async_actor::send(messaging::message&&msg) {
+        bool async_actor::send(std::shared_ptr<messaging::message> msg) {
             return send(std::move(msg), nullptr);
         }
 
         bool async_actor::has_next_message() {
-            messaging::message msg_ptr = mailbox().get();
+            std::shared_ptr<messaging::message> msg_ptr = mailbox().get();
             return push_to_cache(std::move(msg_ptr));
         }
 
-        bool async_actor::push_to_cache(messaging::message &&msg_ptr) {
+        bool async_actor::push_to_cache(std::shared_ptr<messaging::message> msg_ptr) {
             return mailbox().push_to_cache(std::move(msg_ptr));
         }
 
-        messaging::message async_actor::pop_to_cache() {
+        std::shared_ptr<messaging::message> async_actor::pop_to_cache() {
             return mailbox().pop_to_cache();
         }
 
@@ -118,7 +118,7 @@ namespace stream_cloud {
             return *mailbox_;
         }
 
-        messaging::message async_actor::next_message() {
+        std::shared_ptr<messaging::message> async_actor::next_message() {
             return mailbox().get();
         }
 

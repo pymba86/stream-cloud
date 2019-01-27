@@ -45,10 +45,8 @@ namespace stream_cloud {
                         behavior::make_handler(
                                 "write",
                                 [this](behavior::context &ctx) -> void {
-                                    auto t = ctx.message().body<api::transport>();
-                                    std::unique_ptr<api::web_socket> transport(
-                                            static_cast<api::web_socket *>(t.release()));
-                                    pimpl->listener_->write(std::move(transport));
+                                    auto t = ctx.message()->body<api::transport>();
+                                    pimpl->listener_->write(std::static_pointer_cast<api::web_socket>(t));
                                 }
                         )
                 );
@@ -57,10 +55,8 @@ namespace stream_cloud {
                         behavior::make_handler(
                                 "close",
                                 [this](behavior::context &ctx) -> void {
-                                    auto t = ctx.message().body<api::transport>();
-                                    std::unique_ptr<api::web_socket> transport(
-                                            static_cast<api::web_socket *>(t.release()));
-                                    pimpl->listener_->close(std::move(transport));
+                                    auto t = ctx.message()->body<api::transport>();
+                                    pimpl->listener_->close(std::static_pointer_cast<api::web_socket>(t));
                                 }
                         )
                 );
@@ -69,10 +65,8 @@ namespace stream_cloud {
                         behavior::make_handler(
                                 "remove",
                                 [this](behavior::context &ctx) -> void {
-                                    auto t = ctx.message().body<api::transport>();
-                                    std::unique_ptr<api::web_socket> transport(
-                                            static_cast<api::web_socket *>(t.release()));
-                                    pimpl->listener_->remove(std::move(transport));
+                                    auto t = ctx.message()->body<api::transport>();
+                                    pimpl->listener_->remove(std::static_pointer_cast<api::web_socket>(t));
                                 }
                         )
                 );

@@ -15,9 +15,9 @@ namespace stream_cloud {
 
     void skip::invoke(behavior::context &r) {
 
-        auto sender = r.message().sender();
+        auto sender = r.message()->sender();
 
-        auto command = r.message().command().to_string();
+        auto command = r.message()->command().to_string();
 
         if (sender->message_types().count("error")) {
             sender->send(

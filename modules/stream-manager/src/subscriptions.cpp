@@ -58,7 +58,7 @@ namespace stream_cloud {
                     behavior::make_handler("add", [this](behavior::context &ctx) -> void {
                         // Добавляет подписку на группу
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto group_key = task.request.params["group-key"].as<std::string>();
                         auto user_login = task.request.params["user-login"].as<std::string>();
@@ -77,7 +77,7 @@ namespace stream_cloud {
 
                                 response_message.result = true;
 
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -104,7 +104,7 @@ namespace stream_cloud {
                     behavior::make_handler("delete", [this](behavior::context &ctx) -> void {
                         // Удаляет подписку на группу
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto group_key = task.request.params["group-key"].as<std::string>();
                         auto user_login = task.request.params["user-login"].as<std::string>();
@@ -123,7 +123,7 @@ namespace stream_cloud {
 
                                 response_message.result = true;
 
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -151,7 +151,7 @@ namespace stream_cloud {
                     behavior::make_handler("list", [this](behavior::context &ctx) -> void {
                         // Получить всех подписчиков
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto group_key = task.request.params["group-key"].as<std::string>();
 
@@ -173,7 +173,7 @@ namespace stream_cloud {
 
                                 response_message.result = users_list;
 
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -200,7 +200,7 @@ namespace stream_cloud {
                     behavior::make_handler("devices", [this](behavior::context &ctx) -> void {
                         // Получить список устройств к которым подписан авторизованный пользователь
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto user_login = task.storage["user.login"];
 
@@ -223,7 +223,7 @@ namespace stream_cloud {
                                             std::move(task)
                                     )
                             );
-                        } catch (exception &e) {
+                        } catch (std::exception &e) {
 
                             // Отправляем ошибку
                             auto ws_response = new api::web_socket(task.transport_id_);
@@ -251,7 +251,7 @@ namespace stream_cloud {
                     behavior::make_handler("groups", [this](behavior::context &ctx) -> void {
                         // Проверка принадлежности пользователя к группе
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto device_groups = task.request.metadata["device-groups"].as<api::json::json_array>();
                         auto user_login = task.storage["user.login"];
@@ -273,8 +273,8 @@ namespace stream_cloud {
                                         << "select count(*) from subscriptions where user_login = ? and group_key in (?);"
                                         << user_login
                                         << std::accumulate(std::begin(groups), std::end(groups),
-                                                           string(),
-                                                           [](string &ss, string &s) {
+                                                           std::string(),
+                                                           [](std::string &ss, std::string &s) {
                                                                return ss.empty() ? s : ss + "," + s;
                                                            })
                                         >> access_group_users;
@@ -312,7 +312,7 @@ namespace stream_cloud {
                                     );
                                 }
 
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
 
                                 auto ws_response = new api::web_socket(task.transport_id_);
                                 api::json_rpc::response_message response_message;
@@ -361,7 +361,7 @@ namespace stream_cloud {
                         // Проверка на подключение
                         // Добавление устройства к пользователю
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto device_groups = task.request.metadata["device-groups"].as<api::json::json_array>();
                         auto device_key = task.request.params["device-key"].as<std::string>();
@@ -387,8 +387,8 @@ namespace stream_cloud {
                                         << "select group_key from subscriptions where user_login = ? and group_key in (?);"
                                         << user_login
                                         << std::accumulate(std::begin(groups), std::end(groups),
-                                                           string(),
-                                                           [](string &ss, string &s) {
+                                                           std::string(),
+                                                           [](std::string &ss, std::string &s) {
                                                                return ss.empty() ? s : ss + "," + s;
                                                            })
                                         >> [&](std::string group_key) {
@@ -425,7 +425,7 @@ namespace stream_cloud {
                                     }
                                 }
 
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -455,7 +455,7 @@ namespace stream_cloud {
                         // Проверка на подключение
                         // Удаление устройства у пользователя
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto device_key = task.request.params["device-key"].as<std::string>();
                         auto user_login = task.storage["user.login"];
@@ -507,7 +507,7 @@ namespace stream_cloud {
             attach(
                     behavior::make_handler("emit", [this](behavior::context &ctx) -> void {
                         // Отправка уведомления пользователям от устройства
-                        auto &transport = ctx.message().body<api::transport>();
+                        auto &transport = ctx.message()->body<api::transport>();
 
                         auto *ws = static_cast<api::web_socket *>(transport.get());
 

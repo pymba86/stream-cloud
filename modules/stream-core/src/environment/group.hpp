@@ -1,6 +1,5 @@
 #pragma once
 
-#include <intrusive_ptr.hpp>
 #include "abstract_group.hpp"
 #include <channel/channel.hpp>
 
@@ -23,13 +22,13 @@ namespace stream_cloud {
             ~group() = default;
 
             template<class T>
-            explicit group(intrusive_ptr<T> ptr) : group_(std::move(ptr)) {}
+            explicit group(std::shared_ptr<T> ptr) : group_(std::move(ptr)) {}
 
             template<class T>
             explicit group(T *ptr) : group_(ptr) {}
 
             template<class T>
-            group &operator=(intrusive_ptr<T> ptr) {
+            group &operator=(std::shared_ptr<T> ptr) {
                 group tmp{std::move(ptr)};
                 swap(tmp);
                 return *this;
@@ -54,7 +53,7 @@ namespace stream_cloud {
 
             void swap(group &g) noexcept;
 
-            intrusive_ptr<abstract_group> group_;
+            std::shared_ptr<abstract_group> group_;
         };
     }
 }

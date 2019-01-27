@@ -1,7 +1,5 @@
 #pragma once
 
-
-#include <intrusive_ptr.hpp>
 #include <metadata.hpp>
 #include <set>
 #include <forwards.hpp>
@@ -9,11 +7,11 @@
 
 namespace stream_cloud {
     namespace actor {
-        class abstract_actor : public intrusive_base<abstract_actor> {
+    class abstract_actor : public std::enable_shared_from_this<abstract_actor> {
         public:
-            virtual bool send(messaging::message &&) = 0;
+            virtual bool send(std::shared_ptr<messaging::message>) = 0;
 
-            virtual bool send(messaging::message &&, executor::execution_device *) = 0;
+            virtual bool send(std::shared_ptr<messaging::message>, executor::execution_device *) = 0;
 
             virtual ~abstract_actor() = default;
 

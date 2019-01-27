@@ -2,17 +2,17 @@
 #include <string>
 #include <forwards.hpp>
 #include <metadata.hpp>
-#include <intrusive_ptr.hpp>
+#include <memory>
 
 namespace stream_cloud {
 
     namespace channel {
-        struct abstract_channel : public intrusive_base<abstract_channel> {
+    struct abstract_channel : public std::enable_shared_from_this<abstract_channel> {
             virtual ~abstract_channel();
 
-            virtual auto send(messaging::message &&)  -> bool      = 0;
+            virtual auto send(std::shared_ptr<messaging::message>)  -> bool      = 0;
 
-            virtual auto broadcast(messaging::message &&) -> bool  = 0;
+            virtual auto broadcast(std::shared_ptr<messaging::message>) -> bool  = 0;
 
             auto type() const -> abstract ;
 

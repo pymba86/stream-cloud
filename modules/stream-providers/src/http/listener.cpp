@@ -1,6 +1,5 @@
 #include <chrono>
 #include "listener.hpp"
-#include <intrusive_ptr.hpp>
 
 
 namespace stream_cloud {
@@ -210,7 +209,7 @@ namespace stream_cloud {
 
                 std::string path;
 
-                if (req.target().rfind(".") == boost::beast::string_view::npos) {
+                if (mime_type(req.target()) == "application/text") {
                     path = path_cat(root_path, "/index.html");
                 } else {
                     path = path_cat(root_path, req.target());

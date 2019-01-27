@@ -40,11 +40,11 @@ namespace stream_cloud {
                         std::initializer_list<actor::actor_address>
                 );
 
-                void write(const intrusive_ptr<api::web_socket>& ptr);
+                void write(const std::shared_ptr<api::web_socket>& ptr);
 
-                void close(const intrusive_ptr<api::web_socket>& ptr);
+                void close(const std::shared_ptr<api::web_socket>& ptr);
 
-                void remove(const intrusive_ptr<api::web_socket>& ptr);
+                void remove(const std::shared_ptr<api::web_socket>& ptr);
 
                 void close_all();
 

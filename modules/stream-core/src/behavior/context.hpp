@@ -32,13 +32,13 @@ namespace stream_cloud {
 
             context() = default;
 
-            context(context_t* ptr, messaging::message&&);
+            context(context_t* ptr,std::shared_ptr<messaging::message>);
 
             ~context();
 
-            messaging::message& message();
+            std::shared_ptr<messaging::message> message();
 
-            const messaging::message& message() const;
+            const std::shared_ptr<messaging::message> message() const;
 
             auto operator ->() noexcept -> context_t*;
 
@@ -50,7 +50,7 @@ namespace stream_cloud {
 
         private:
             std::unique_ptr<context_t> ptr;
-            messaging::message msg;
+            std::shared_ptr<messaging::message> msg;
         };
 
     }

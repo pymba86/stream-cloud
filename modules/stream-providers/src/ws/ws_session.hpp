@@ -48,65 +48,7 @@ namespace stream_cloud {
             class ws_session : public std::enable_shared_from_this<ws_session> {
 
                 // This queue_vm is used for HTTP pipelining.
-                class queue final {
-                    enum {
-                        // Maximum number of responses we will queue
-                                limit = 8
-                    };
 
-                    // The type-erased, saved work item
-                    struct work {
-                        virtual ~work() = default;
-
-                        virtual void operator()() = 0;
-                    };
-
-                    ws_session &self_;
-                    std::vector<std::shared_ptr<work>> items_;
-
-                public:
-                    explicit queue(ws_session &self);
-
-                    // Returns `true` if we have reached the queue_vm limit
-                    bool is_full() const;
-
-                    // Called when a message finishes sending
-                    // Returns `true` if the caller should initiate a read
-                    bool on_write();
-
-                    // Called by the HTTP handler to send a response.
-                    void operator()(std::shared_ptr<std::string const> const& msg) {
-                        // This holds a work item
-                        struct work_impl final : work {
-                            ws_session &self_;
-                            std::shared_ptr<std::string const> msg_;
-
-                            work_impl(
-                                    ws_session &self,
-                                    std::shared_ptr<std::string const> msg)
-                                    : self_(self), msg_(std::move(msg)) {
-                            }
-
-                            void
-                            operator()() { // self_.ws_.
-                                self_.ws_.async_write(
-                                        boost::asio::buffer(*msg_),
-                                        std::bind(
-                                                &ws_session::on_write,
-                                                self_.shared_from_this(),
-                                                std::placeholders::_1,
-                                                std::placeholders::_2));
-                            }
-                        };
-
-                        // Allocate and store the work
-                        items_.push_back(std::make_shared<work_impl>(self_, msg));
-
-                        // If there was no previous work, start this one
-                        if (items_.size() == 1)
-                            (*items_.front())();
-                    }
-                };
 
             public:
                 explicit ws_session(
@@ -117,7 +59,7 @@ namespace stream_cloud {
 
                 void run();
 
-                void write(const intrusive_ptr<api::web_socket> &ptr);
+                void write(const std::shared_ptr<api::web_socket> &ptr);
 
                 void write(const std::string &value);
 
@@ -142,7 +84,7 @@ namespace stream_cloud {
                 boost::asio::strand<boost::asio::io_context::executor_type> strand_;
                 boost::beast::flat_buffer buffer_;
                 actor::actor_address main_pipe_;
-                queue queue_;
+                std::deque<std::shared_ptr<std::string const>> _que {};
             };
 
         }

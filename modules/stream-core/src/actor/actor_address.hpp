@@ -1,7 +1,6 @@
 
 #pragma once
 
-#include <intrusive_ptr.hpp>
 #include "abstract_actor.hpp"
 #include <forwards.hpp>
 
@@ -40,7 +39,7 @@ namespace stream_cloud {
             abstract_actor* ptr_;
         };
 
-        inline void send(actor_address& address, messaging::message&& msg){
+        inline void send(actor_address& address, std::shared_ptr<messaging::message> msg){
             address->send(std::move(msg));
         }
     }

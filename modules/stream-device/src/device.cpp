@@ -13,7 +13,6 @@
 #include <transport_base.hpp>
 #include <http.hpp>
 #include <boost/format.hpp>
-#include <intrusive_ptr.hpp>
 #include <transport_base.hpp>
 #include "websocket.hpp"
 #include <thread>

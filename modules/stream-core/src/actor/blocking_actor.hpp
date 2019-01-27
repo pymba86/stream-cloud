@@ -24,7 +24,7 @@ namespace stream_cloud {
             void launch(executor::execution_device *,bool) override final ;
             virtual ~blocking_actor();
 
-            messaging::message next_message();
+            std::shared_ptr<messaging::message> next_message();
 
             mailbox_type &mailbox();
 

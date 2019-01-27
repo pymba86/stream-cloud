@@ -50,7 +50,7 @@ namespace stream_cloud {
                             "dispatcher",
                             [this](behavior::context &ctx) -> void {
 
-                                auto &transport = ctx.message().body<api::transport>();
+                                auto &transport = ctx.message()->body<api::transport>();
                                 auto transport_type = transport->type();
 
                                 if (transport_type == api::transport_type::ws) {
@@ -195,7 +195,7 @@ namespace stream_cloud {
             attach(
                     behavior::make_handler("service", [this](behavior::context &ctx) -> void {
 
-                        auto &task = ctx.message().body<api::task>();
+                        auto &task = ctx.message()->body<api::task>();
 
                         auto service_name = task.storage["service.name"];
                         auto method_name = task.storage["service.method"];
@@ -265,7 +265,7 @@ namespace stream_cloud {
                     behavior::make_handler("error", [this](behavior::context &ctx) -> void {
                         // Обработка ошибок
 
-                        auto &transport = ctx.message().body<api::transport>();
+                        auto &transport = ctx.message()->body<api::transport>();
                         auto transport_type = transport->type();
 
                         if (transport_type == api::transport_type::ws) {

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <intrusive_ptr.hpp>
 #include "abstract_channel.hpp"
 
 namespace stream_cloud {
@@ -22,14 +21,14 @@ namespace stream_cloud {
 
             void swap(channel &other) noexcept;
 
-            intrusive_ptr<abstract_channel> channel_;
+            std::shared_ptr<abstract_channel> channel_;
         };
 
-        inline void send(channel& current_channel,messaging::message&&msg){
+        inline void send(channel& current_channel,std::shared_ptr<messaging::message> msg){
             current_channel->send(std::move(msg));
         }
 
-        inline void broadcast(channel& current_channel,messaging::message&&msg){
+        inline void broadcast(channel& current_channel,std::shared_ptr<messaging::message> msg){
             current_channel->broadcast(std::move(msg));
         }
 

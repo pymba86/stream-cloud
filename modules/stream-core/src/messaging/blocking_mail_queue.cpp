@@ -1,11 +1,12 @@
 
 #include <messaging/blocking_mail_queue.hpp>
+#include <iostream>
 
 namespace stream_cloud {
 
     namespace messaging {
 
-        enqueue_result blocking_mail_queue::put(message &&m) {
+        enqueue_result blocking_mail_queue::put(std::shared_ptr<messaging::message> m) {
             enqueue_result status;
             {
                 lock_guard lock(mutex);
@@ -16,22 +17,23 @@ namespace stream_cloud {
             return status;
         }
 
-        message blocking_mail_queue::get() {
+        std::shared_ptr<messaging::message> blocking_mail_queue::get() {
+            lock_guard lock(mutex);
             if (local_queue.empty()) {
                 sync();
             }
 
-            message tmp;
-
+            std::shared_ptr<message> tmp_ptr;
             if (!local_queue.empty()) {
-                tmp = std::move(local_queue.front());
+                tmp_ptr = local_queue.front();
                 local_queue.pop_front();
+                return tmp_ptr;
+            } else {
+                return tmp_ptr;
             }
-
-            return tmp;
         }
 
-        bool blocking_mail_queue::push_to_cache(messaging::message &&msg_ptr) {
+        bool blocking_mail_queue::push_to_cache(std::shared_ptr<messaging::message> msg_ptr) {
             if (msg_ptr) {
                 cache().push_back(std::move(msg_ptr));
                 return true;
@@ -40,10 +42,10 @@ namespace stream_cloud {
             }
         }
 
-        messaging::message blocking_mail_queue::pop_to_cache() {
-            messaging::message msg_ptr;
+        std::shared_ptr<messaging::message> blocking_mail_queue::pop_to_cache() {
+            std::shared_ptr<messaging::message> msg_ptr;
             if (!cache().empty()) {
-                msg_ptr = std::move(cache().front());
+                msg_ptr = cache().front();
                 cache().pop_front();
                 return msg_ptr;
             }
@@ -56,7 +58,6 @@ namespace stream_cloud {
 
 
         void blocking_mail_queue::sync() {
-            lock_guard lock(mutex);
             local_queue.splice(local_queue.begin(), mail_queue);
         }
 

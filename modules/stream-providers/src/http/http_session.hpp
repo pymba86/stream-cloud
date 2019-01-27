@@ -105,7 +105,7 @@ namespace stream_cloud {
 
                 void do_close();
 
-                void write(const intrusive_ptr<api::http> &ptr);
+                void write(const std::shared_ptr<api::http> &ptr);
 
                 template<bool isRequest, class Body, class Fields>
                 void send(http::message<isRequest, Body, Fields>&& msg) {

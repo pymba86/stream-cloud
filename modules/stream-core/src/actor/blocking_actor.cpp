@@ -8,7 +8,7 @@ namespace stream_cloud {
             device(e);
             for (;;) {
 
-                messaging::message msg_ptr = next_message();
+                std::shared_ptr<messaging::message> msg_ptr = next_message();
                 if (msg_ptr) {
                     behavior::context context_(this, std::move(msg_ptr));
                     reactions_.execute(context_);
@@ -36,7 +36,7 @@ namespace stream_cloud {
 
         }
 
-        messaging::message blocking_actor::next_message() {
+        std::shared_ptr<messaging::message> blocking_actor::next_message() {
             return mailbox().get();
         }
 

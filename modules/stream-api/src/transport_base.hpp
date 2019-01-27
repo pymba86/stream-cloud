@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <boost/optional.hpp>
-#include <intrusive_ptr.hpp>
 
 namespace stream_cloud {
     namespace api {
@@ -15,7 +14,7 @@ namespace stream_cloud {
 
         using transport_id = std::string ;
 
-        class transport_base : public intrusive_base<transport_base>  {
+    class transport_base : public std::enable_shared_from_this<transport_base>  {
         public:
             transport_base(transport_type type,transport_id);
             virtual ~transport_base() = default;
@@ -28,11 +27,11 @@ namespace stream_cloud {
 
         };
 
-        using transport = intrusive_ptr<transport_base>;
+        using transport = std::shared_ptr<transport_base>;
 
         template <typename T,typename ...Args>
         inline auto make_transport(Args... args) -> transport {
-            return intrusive_ptr<T>(new T (std::forward<Args>(args)...));
+            return std::shared_ptr<T>(new T (std::forward<Args>(args)...));
         }
 
     }

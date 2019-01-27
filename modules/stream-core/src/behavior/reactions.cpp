@@ -15,7 +15,7 @@ namespace stream_cloud {
 
 
         void reactions::execute(context &d) {
-            auto it = reactions_.find(d.message().command());
+            auto it = reactions_.find(d.message()->command());
             if (it != reactions_.end()) {
                 return it->second->invoke(d);
             } else {

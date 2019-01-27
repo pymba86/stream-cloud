@@ -1,6 +1,7 @@
 #include <utility>
 
-#include <utility>
+#include <chrono>
+#include <thread>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/cxx11/any_of.hpp>
 
@@ -13,7 +14,6 @@
 #include <transport_base.hpp>
 #include <http.hpp>
 #include <boost/format.hpp>
-#include <intrusive_ptr.hpp>
 #include <transport_base.hpp>
 #include "websocket.hpp"
 #include <thread>
@@ -51,12 +51,13 @@ namespace stream_cloud {
                     behavior::make_handler("dispatcher", [this](behavior::context &ctx) -> void {
                         // Ответ от платформы
 
-                        auto &transport = ctx.message().body<api::transport>();
+                        auto transport = ctx.message()->body<api::transport>();
                         auto transport_type = transport->type();
 
-                        auto *ws = static_cast<api::web_socket *>(transport.get());
-
                         if (transport_type == api::transport_type::ws) {
+
+                            auto ws = std::static_pointer_cast<api::web_socket>(transport);
+
                             api::json::json_map message{api::json::data{ws->body}};
 
                             std::cout << "manager: " << message << std::endl;
@@ -64,7 +65,6 @@ namespace stream_cloud {
                             if (api::json_rpc::is_request(message)) {
 
                                 auto id = message["metadata"]["transport"].as<api::transport_id>();
-
 
 
                                 api::task task;
@@ -111,19 +111,17 @@ namespace stream_cloud {
 
                                                 ws->body = api::json_rpc::serialize(response_message);
 
-                                                auto *ws_manager = new api::web_socket(id);
-
                                                 ctx->addresses("ws")->send(
                                                         messaging::make_message(
                                                                 ctx->self(),
                                                                 "write",
-                                                                api::transport(ws_manager)
+                                                                api::transport(new api::web_socket(id))
                                                         )
                                                 );
                                             }
                                         } else {
 
-                                            auto *ws_manager = new api::web_socket(id);
+                                            auto ws_manager = new api::web_socket(id);
 
                                             api::json_rpc::response_message response_message;
                                             response_message.id = task.request.id;
@@ -207,7 +205,7 @@ namespace stream_cloud {
                     behavior::make_handler("handshake", [this](behavior::context &ctx) -> void {
                         // Отправка команды на подключение к менеджеру
 
-                        auto &transport = ctx.message().body<api::transport>();
+                        auto &transport = ctx.message()->body<api::transport>();
 
                         auto ws_response = new api::web_socket(transport->id());
                         api::json_rpc::request_message request_message;
@@ -242,7 +240,7 @@ namespace stream_cloud {
                     behavior::make_handler("error", [this](behavior::context &ctx) -> void {
                         // Обработка ошибок
 
-                        auto &transport = ctx.message().body<api::transport>();
+                        auto &transport = ctx.message()->body<api::transport>();
                         auto transport_type = transport->type();
 
                         if (transport_type == api::transport_type::ws) {
@@ -251,11 +249,23 @@ namespace stream_cloud {
 
                             if (error->code == boost::asio::error::connection_reset
                                 || error->code == boost::asio::error::not_connected
+                                || error->code == boost::asio::error::connection_refused
                                 || error->code == boost::asio::error::eof
-                                   || error->code == boost::beast::websocket::error::closed) {
+                                || error->code == boost::beast::websocket::error::closed) {
                                 // Соединение сброшено на другой стороне
 
                                 std::cout << "device disconnect from manager" << std::endl;
+                                std::cout << "waiting 10sec..." << std::endl;
+                                std::this_thread::sleep_for(std::chrono::seconds(10));
+                                std::cout << "reconnecting..." << std::endl;
+
+                                ctx->addresses("client")->send(
+                                        messaging::make_message(
+                                                ctx->self(),
+                                                "reconnect",
+                                                std::move(std::string())
+                                        )
+                                );
 
                             } else {
 
@@ -280,7 +290,7 @@ namespace stream_cloud {
                     behavior::make_handler("write", [this](behavior::context &ctx) -> void {
                         // Обработчик после отправки сообщения
 
-                        auto &transport = ctx.message().body<api::transport>();
+                        auto &transport = ctx.message()->body<api::transport>();
                         auto transport_type = transport->type();
 
                         if (transport_type == api::transport_type::ws) {
@@ -303,7 +313,7 @@ namespace stream_cloud {
                             message["metadata"] = metadata;
 
 
-                            auto *ws_response = new api::web_socket(ws->id());
+                            auto ws_response = new api::web_socket(ws->id());
                             ws_response->body = message.to_string();
 
                             ctx->addresses("client")->send(
