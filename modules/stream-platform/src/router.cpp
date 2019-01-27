@@ -12,7 +12,6 @@
 #include <http.hpp>
 #include <error.hpp>
 #include <boost/format.hpp>
-#include <intrusive_ptr.hpp>
 #include <transport_base.hpp>
 #include "websocket.hpp"
 #include <thread>
@@ -50,12 +49,12 @@ namespace stream_cloud {
                             "dispatcher",
                             [this](behavior::context &ctx) -> void {
 
-                                auto &transport = ctx.message()->body<api::transport>();
+                                auto transport = ctx.message()->body<api::transport>();
                                 auto transport_type = transport->type();
 
                                 if (transport_type == api::transport_type::ws) {
 
-                                    auto *ws = static_cast<api::web_socket *>(transport.get());
+                                    auto ws = std::static_pointer_cast<api::web_socket>(transport);
 
                                     api::json::json_map message{api::json::data{ws->body}};
 
@@ -265,12 +264,12 @@ namespace stream_cloud {
                     behavior::make_handler("error", [this](behavior::context &ctx) -> void {
                         // Обработка ошибок
 
-                        auto &transport = ctx.message()->body<api::transport>();
+                        auto transport = ctx.message()->body<api::transport>();
                         auto transport_type = transport->type();
 
                         if (transport_type == api::transport_type::ws) {
 
-                            auto *error = static_cast<api::error *>(transport.get());
+                            auto error = std::static_pointer_cast<api::error>(transport);
 
                             if (error->code == boost::asio::error::connection_reset
                                 || error->code == boost::asio::error::not_connected

@@ -90,7 +90,7 @@ namespace stream_cloud {
                                                 std::move(url)
                                         )
                                 );
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -168,7 +168,7 @@ namespace stream_cloud {
 
                                 pimpl->remove_reg_manager(key);
 
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -223,7 +223,7 @@ namespace stream_cloud {
 
                             response_message.result = managers_list;
 
-                        } catch (exception &e) {
+                        } catch (std::exception &e) {
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
                                     e.what());
@@ -279,7 +279,7 @@ namespace stream_cloud {
                                         "manager not found");
                             }
 
-                        } catch (exception &e) {
+                        } catch (std::exception &e) {
                             response_message.error = api::json_rpc::response_error(
                                     api::json_rpc::error_code::unknown_error_code,
                                     e.what());
@@ -309,7 +309,7 @@ namespace stream_cloud {
 
                         try {
                             pimpl->remove_reg_manager(key);
-                        } catch (exception &e) {
+                        } catch (std::exception &e) {
 
                             // Отправляем ответ
                             auto ws_response = new api::web_socket(task.transport_id_);
@@ -386,9 +386,8 @@ namespace stream_cloud {
             attach(
                     behavior::make_handler("response", [this](behavior::context &ctx) -> void {
 
-                        auto &transport = ctx.message()->body<api::transport>();
-
-                        auto *ws = static_cast<api::web_socket *>(transport.get());
+                        auto transport = ctx.message()->body<api::transport>();
+                        auto ws = std::static_pointer_cast<api::web_socket>(transport);
 
                         // Отправляем ответ от проверенного менеджера клиенту
                         api::json::json_map message{api::json::data{ws->body}};

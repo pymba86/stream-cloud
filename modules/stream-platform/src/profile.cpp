@@ -62,7 +62,7 @@ namespace stream_cloud {
 
                                 response_message.result = true;
 
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -106,9 +106,9 @@ namespace stream_cloud {
                             try {
                                 pimpl->db_ << "select login, password from profile where login = ? limit 1;"
                                            << login_param
-                                           >> [&](unique_ptr<string> login_p, unique_ptr<string> password_p) {
-                                               login = login_p ? *login_p : string();
-                                               password = password_p ? *password_p : string();
+                                           >> [&](std::unique_ptr<std::string> login_p, std::unique_ptr<std::string> password_p) {
+                                               login = login_p ? *login_p : std::string();
+                                               password = password_p ? *password_p : std::string();
                                            };
 
                                 if (password_param == password) {
@@ -118,7 +118,7 @@ namespace stream_cloud {
                                             api::json_rpc::error_code::unknown_error_code,
                                             "login or password is incorrect");
                                 }
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
                                 response_message.error = api::json_rpc::response_error(
                                         api::json_rpc::error_code::unknown_error_code,
                                         e.what());
@@ -170,9 +170,9 @@ namespace stream_cloud {
                             try {
                                 pimpl->db_ << "select login, password from profile where login = ? limit 1;"
                                            << profile[0]
-                                           >> [&](unique_ptr<string> login_p, unique_ptr<string> password_p) {
-                                               login = login_p ? *login_p : string();
-                                               password = password_p ? *password_p : string();
+                                           >> [&](std::unique_ptr<std::string> login_p, std::unique_ptr<std::string> password_p) {
+                                               login = login_p ? *login_p : std::string();
+                                               password = password_p ? *password_p : std::string();
                                            };
 
                                 if (profile[1] == password) {
@@ -209,7 +209,7 @@ namespace stream_cloud {
                                             )
                                     );
                                 }
-                            } catch (exception &e) {
+                            } catch (std::exception &e) {
 
                                 auto ws_response = new api::web_socket(task.transport_id_);
                                 api::json_rpc::response_message response_message;
