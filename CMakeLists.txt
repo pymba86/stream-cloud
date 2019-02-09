@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.5)
 
+#set(CMAKE_SYSTEM_NAME Linux)
+#set(CMAKE_SYSTEM_VERSION 1)
+#set(CMAKE_SYSTEM_PROCESSOR arm)
+
 set(CMAKE_C_COMPILER $ENV{CC})
 set(CMAKE_CXX_COMPILER $ENV{CXX})
 
@@ -12,6 +16,7 @@ list(APPEND BOOST_COMPONENTS
         timer
         filesystem
         serialization
+        program_options
         )
 
 find_package(Boost 1.68 REQUIRED COMPONENTS ${BOOST_COMPONENTS})

@@ -15,6 +15,6 @@ namespace stream_cloud {
 
         void generate_config(config::configuration &config);
 
-        void load_or_generate_config(config::configuration &config);
+        void load_or_generate_config(config::configuration &config, const  boost::filesystem::path &path);
     }
 }

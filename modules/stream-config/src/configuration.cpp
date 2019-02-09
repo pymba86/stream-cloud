@@ -21,6 +21,7 @@ namespace stream_cloud {
                     {"ws-port",   "8081"},
                     {"profile-key",   ""},
                     {"manager-key",   ""},
+                    {"db",   ""},
                     {"client",    {
                                           {"ip", "127.0.0.1"},
                                           {"port", "8081"}
@@ -30,11 +31,11 @@ namespace stream_cloud {
             };
         }
 
-        void load_or_generate_config(config::configuration &config) {
+        void load_or_generate_config(config::configuration &config, const boost::filesystem::path &path) {
 
             // set current path
-            config.path_app = boost::filesystem::current_path();
-            boost::filesystem::path config_path = config.path_app / config_name_file;
+            config.path_app = path;
+            boost::filesystem::path config_path = path / config_name_file;
 
             if (boost::filesystem::exists(config_path)) {
                 load_config(config, config_path);

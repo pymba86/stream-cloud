@@ -411,7 +411,7 @@ namespace stream_cloud {
             );
         }
 
-        void managers::startup(config::config_context_t *) {
+        void managers::startup(config::config_context_t * ctx) {
 
             sqlite_config storage_config;
             storage_config.flags = OpenFlags::READWRITE | OpenFlags::CREATE | OpenFlags::FULLMUTEX;
